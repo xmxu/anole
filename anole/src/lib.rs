@@ -1,3 +1,7 @@
+
+pub mod faker;
+
+
 #[cfg(test)]
 mod tests {
     #[test]
