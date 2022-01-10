@@ -1,0 +1,12 @@
+[package]
+name = "examples"
+edition = "2021"
+publish = false
+version = "0.0.0"
+
+[dev-dependencies]
+anole = {path = "../anole"}
+
+[[example]]
+name = "faker"
+path = "faker.rs"
