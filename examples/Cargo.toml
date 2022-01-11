@@ -6,7 +6,14 @@ version = "0.0.0"
 
 [dev-dependencies]
 anole = {path = "../anole"}
+tokio = { version = "1.15.0", features = ["full"] }
+log = "0.4.14"
+env_logger = "0.9.0"
 
 [[example]]
 name = "faker"
 path = "faker.rs"
+
+[[example]]
+name = "http"
+path = "http.rs"
