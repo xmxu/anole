@@ -1,4 +1,6 @@
-use log::debug;
+use std::time::Instant;
+
+use log::{debug, info};
 
 use crate::{context::Context, task::http::HttpTask};
 
@@ -19,11 +21,13 @@ impl Engine {
     }
 
     pub async fn run(mut self) {
+        let cost = Instant::now();
         for ele in self.tasks.into_iter() {
             ele.execute(self.ctx.as_mut()).await;
         }
 
         debug!("store:{:?}", self.ctx.store);
+        info!("execute completed! cost_time:{:?}", cost.elapsed());
     }
 }
 

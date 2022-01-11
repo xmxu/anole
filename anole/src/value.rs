@@ -117,6 +117,47 @@ impl From<String> for Value {
     }
 }
 
+impl From<&serde_json::Value> for Value {
+    fn from(val: &serde_json::Value) -> Self {
+        if val.is_boolean() {
+            Value::Bool(val.as_bool().unwrap())
+        } else if val.is_i64() {
+            Value::I32(val.as_i64().unwrap() as i32)
+        } else if val.is_f64() {
+            Value::F64(val.as_f64().unwrap())
+        } else {
+            Value::Str(String::new())
+        }
+    }
+}
+
+pub fn parse_json_value(value: &serde_json::Value, key: String) -> Option<serde_json::Value> {
+    let keys = key.split(".");
+    let mut cur_value = value;
+    for k in keys {
+        if let Some(idx) = parse_number(k) {
+            if cur_value.is_array() && cur_value.as_array().unwrap().len() > idx {
+                cur_value = &cur_value[idx];
+            } else {
+                return None;
+            }
+        } else {
+            cur_value = &cur_value[k];
+        }
+    }
+    if cur_value != value {
+        return Some(cur_value.to_owned());
+    }
+    None
+}
+
+fn parse_number(s: &str) -> Option<usize> {
+    if let Ok(i) = s.parse::<usize>() {
+        return Some(i);
+    }
+    None
+}
+
 impl Serialize for Value {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

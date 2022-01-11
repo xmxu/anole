@@ -2,7 +2,7 @@ use std::{collections::HashMap, time::Duration};
 use reqwest::Response;
 use serde::ser::SerializeMap;
 
-use crate::{value::Value, capture::Capture, context::Context};
+use crate::{value::{Value, self}, capture::Capture, context::Context};
 
 #[derive(Debug)]
 pub enum Method {
@@ -88,16 +88,24 @@ impl HttpTask {
         }
         if let Some(_rsp) = self.rsp {
             if let Some(_caps) = self.config.capture {
-                serde_json::from_reader(_rsp.bytes().await.unwrap());
+                // serde_json::from_reader(_rsp.bytes().await.unwrap());
+                let headers = &_rsp.headers().to_owned();
+                let body_value = _rsp.json::<serde_json::Value>().await.unwrap();
                 for _cap in _caps {
                     let _ = match _cap {
                         Capture::Header(_c) => {
-                            if let Some(v) = _rsp.headers().get(&_c.key) {
-                                ctx.store.set(_c.key, Value::Str(v.to_str().unwrap().to_string()));
+                            if let Some(v) = headers.get(&_c.key) {
+                                ctx.store.set(_c.save_key, Value::Str(v.to_str().unwrap().to_string()));
                             }
                         },
                         Capture::Json(_c) => {
-
+                            if !body_value.is_null() {
+                                if let Some(cv) = value::parse_json_value(&body_value, _c.key) {
+                                    if !cv.is_null() {
+                                        ctx.store.set(_c.save_key, Value::from(&cv));
+                                    }
+                                }                               
+                            }
                         },
                         _ => ()
                     }; 
