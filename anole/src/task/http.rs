@@ -1,6 +1,5 @@
 use std::{collections::HashMap, time::Duration};
 use reqwest::Response;
-use serde::ser::SerializeMap;
 
 use crate::{value::{Value, self}, capture::Capture, context::Context};
 
@@ -21,25 +20,21 @@ pub enum Serializer {
     Protobuf,
 }
 
-#[derive(Debug)]
-pub struct Query(HashMap<String, Value>);
-
-impl serde::Serialize for Query {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer {
-        
-            
-            let mut s = serializer.serialize_map(Some(self.0.len()))?;
-            for (k, v) in &self.0 {
-                s.serialize_entry(&k, &v)?;
-            }
-            s.end()
+impl From<Method> for reqwest::Method {
+    fn from(val: Method) -> Self {
+        match val {
+            Method::Get => reqwest::Method::GET,
+            Method::Post => reqwest::Method::POST,
+            Method::Put => reqwest::Method::PUT,
+            Method::Head => reqwest::Method::HEAD,
+            Method::Delete => reqwest::Method::DELETE,
+            Method::Patch => reqwest::Method::PATCH,
+        }
     }
 }
 
-impl From<Method> for reqwest::Method {
-    fn from(val: Method) -> Self {
+impl From<&Method> for reqwest::Method {
+    fn from(val: &Method) -> Self {
         match val {
             Method::Get => reqwest::Method::GET,
             Method::Post => reqwest::Method::POST,
@@ -62,15 +57,72 @@ impl HttpTask {
     pub async fn execute(mut self, ctx: &mut Context) {
         let client = reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(20))
-        .user_agent("Anole Client").build().unwrap();
+        .connection_verbose(self.config.verbose)
+        .user_agent(format!("anole_client_{}", env!("CARGO_PKG_VERSION"))).build().unwrap();
 
-        let mut request_builder = client.request(reqwest::Method::GET, &self.config.url);
+        let mut url = url::Url::parse(&self.config.url).unwrap();
+        if let Some(mut path_segments) = url.path_segments() {
+            let mut paths: Vec<String> = vec![];
+            for p in path_segments.by_ref() {
+                if p.starts_with(':') {
+                    let k = &p[1..p.len()];
+                    if let Some(v) = ctx.store.get(k.to_string()) {
+                        let vv = v.as_str();
+                        paths.push(vv);
+                    }
+                } else {
+                    paths.push(p.to_string());
+                }
+            }
+            let path = paths.into_iter().reduce(|mut p, x| {
+                p.push('/');
+                p.push_str(&x);
+                p
+            } ).unwrap();
+            url.set_path(&path);
+        }
+        let method: reqwest::Method = reqwest::Method::from(&self.config.method);
+        let mut request_builder = client.request(method, url.as_str());
+
+        //header
+        if let Some(h) = &self.config.header {
+            let mut h = h.to_owned();
+            for (k, v) in h.iter_mut() {
+                if let Some(wildcard) = v.as_wildcard() {
+                    if let Some(wv) = ctx.store.get(wildcard) {
+                        *v = wv.to_owned();
+                    }
+                }
+                let vstr = v.as_str();
+                request_builder = request_builder.header(k.as_str(), &vstr);
+            }
+        }
+
+        //query
         if let Some(q) = &self.config.query {
+            let mut q = q.to_owned();
+            for (_, v) in q.iter_mut() {
+                if let Some(wildcard) = v.as_wildcard() {
+                    if let Some(wv) = ctx.store.get(wildcard) {
+                        *v = wv.to_owned();
+                    }
+                }
+            }
             request_builder = request_builder.query(&q);
         }
+        //form
         if let Some(f) = &self.config.form {
+            let mut f = f.to_owned();
+            for (_, v) in f.iter_mut() {
+                if let Some(wildcard) = v.as_wildcard() {
+                    if let Some(wv) = ctx.store.get(wildcard) {
+                        *v = wv.to_owned();
+                    }
+                }
+            }
             request_builder = request_builder.form(&f);
         }
+        //body
         if let Some(b) = &self.config.body {
             request_builder = request_builder.body(b.to_owned());
         }
@@ -88,7 +140,6 @@ impl HttpTask {
         }
         if let Some(_rsp) = self.rsp {
             if let Some(_caps) = self.config.capture {
-                // serde_json::from_reader(_rsp.bytes().await.unwrap());
                 let headers = &_rsp.headers().to_owned();
                 let body_value = _rsp.json::<serde_json::Value>().await.unwrap();
                 for _cap in _caps {
@@ -120,10 +171,12 @@ pub struct HttpTaskBuilder {
     pub(crate) url: String,
     pub(crate) method: Method,
     pub(crate) serializer: Serializer,
+    pub(crate) header: Option<HashMap<String, Value>>,
     pub(crate) query: Option<HashMap<String, Value>>,
     pub(crate) form: Option<HashMap<String, Value>>,
     pub(crate) body: Option<bytes::Bytes>,
     pub(crate) capture: Option<Vec<Capture>>,
+    pub(crate) verbose: bool,
 }
 
 impl HttpTaskBuilder {
@@ -132,10 +185,12 @@ impl HttpTaskBuilder {
             url: String::new(),
             method: Method::Get,
             serializer: Serializer::Json,
+            header: None,
             query: None,
             form: None,
             body: None,
             capture: None,
+            verbose: false
         }
     }
 
@@ -154,13 +209,33 @@ impl HttpTaskBuilder {
         self
     }
 
-    pub fn query(mut self, query: HashMap<String, Value>) -> Self {
-        self.query = Some(query);
+    pub fn header(mut self, header: (String, Value)) -> Self {
+        if self.header.is_none() {
+            self.header = Some(HashMap::new())
+        }
+        if let Some(ref mut h) = self.header {
+            h.insert(header.0, header.1);
+        }
         self
     }
 
-    pub fn form(mut self, form: HashMap<String, Value>) -> Self {
-        self.form = Some(form);
+    pub fn query(mut self, query: (String, Value)) -> Self {
+        if self.query.is_none() {
+            self.query = Some(HashMap::new())
+        }
+        if let Some(ref mut q) = self.query {
+            q.insert(query.0, query.1);
+        }
+        self
+    }
+
+    pub fn form(mut self, form: (String, Value)) -> Self {
+        if self.form.is_none() {
+            self.form = Some(HashMap::new())
+        }
+        if let Some(ref mut f) = self.form {
+            f.insert(form.0, form.1);
+        }
         self
     }
 
@@ -171,6 +246,11 @@ impl HttpTaskBuilder {
 
     pub fn capture(mut self, capture: Vec<Capture>) -> Self {
         self.capture = Some(capture);
+        self
+    }
+
+    pub fn verbose(mut self, verbose: bool) -> Self {
+        self.verbose = verbose;
         self
     }
 

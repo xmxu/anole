@@ -3,7 +3,7 @@ use serde::Serialize;
 use crate::error;
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Value {
     I32(i32),
     U32(u32),
@@ -13,12 +13,12 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn as_i32(self) -> crate::Result<i32> {
-        match self {
-            Self::I32(v) => Ok(v),
-            Self::U32(v) => Ok(v as i32),
-            Self::F64(v) => Ok(v as i32),
-            Self::Bool(v) => Ok(v as i32),
+    pub fn as_i32(&self) -> crate::Result<i32> {
+        match &self {
+            Self::I32(v) => Ok(*v),
+            Self::U32(v) => Ok(*v as i32),
+            Self::F64(v) => Ok(*v as i32),
+            Self::Bool(v) => Ok(*v as i32),
             Self::Str(v) => match v.parse::<i32>() {
                 Ok(i) => Ok(i),
                 Err(e) => Err(error::parse_value(e.into()))
@@ -26,12 +26,12 @@ impl Value {
         }
     }
 
-    pub fn as_u32(self) -> crate::Result<u32> {
-        match self {
-            Self::I32(v) => Ok(v as u32),
-            Self::U32(v) => Ok(v),
-            Self::F64(v) => Ok(v as u32),
-            Self::Bool(v) => Ok(v as u32),
+    pub fn as_u32(&self) -> crate::Result<u32> {
+        match &self {
+            Self::I32(v) => Ok(*v as u32),
+            Self::U32(v) => Ok(*v),
+            Self::F64(v) => Ok(*v as u32),
+            Self::Bool(v) => Ok(*v as u32),
             Self::Str(v) => match v.parse::<u32>() {
                 Ok(u) => Ok(u),
                 Err(e) => Err(error::parse_value(e.into()))
@@ -39,13 +39,13 @@ impl Value {
         }
     }
 
-    pub fn as_f(self) -> crate::Result<f64> {
-        match self {
-            Self::I32(v) => Ok(v as f64),
-            Self::U32(v) => Ok(v as f64),
-            Self::F64(v) => Ok(v),
+    pub fn as_f(&self) -> crate::Result<f64> {
+        match &self {
+            Self::I32(v) => Ok(*v as f64),
+            Self::U32(v) => Ok(*v as f64),
+            Self::F64(v) => Ok(*v),
             Self::Bool(v) => {
-                if v {
+                if *v {
                     return Ok(1.0);
                 }
                 Ok(0.0)
@@ -57,12 +57,12 @@ impl Value {
         }
     }
 
-    pub fn as_bool(self) -> crate::Result<bool> {
-        match self {
-            Self::I32(i) => Ok(i > 0),
-            Self::U32(u) => Ok(u > 0),
-            Self::F64(f) => Ok(f > 0.0),
-            Self::Bool(b) => Ok(b),
+    pub fn as_bool(&self) -> crate::Result<bool> {
+        match &self {
+            Self::I32(i) => Ok(*i > 0),
+            Self::U32(u) => Ok(*u > 0),
+            Self::F64(f) => Ok(*f > 0.0),
+            Self::Bool(b) => Ok(*b),
             Self::Str(s) => match s.parse::<bool>() {
                 Ok(b) => Ok(b),
                 Err(e) => Err(error::parse_value(e.into()))
@@ -70,16 +70,36 @@ impl Value {
         }
     }
 
-    pub fn as_str(self) -> String {
-        match self {
-            Self::Str(s) => s,
+    pub fn as_str(&self) -> String {
+        match &self {
+            Self::Str(s) => s.to_string(),
             Self::I32(i) => i.to_string(),
             Self::U32(u) => u.to_string(),
             Self::Bool(b) => b.to_string(),
             Self::F64(f) => f.to_string(),
         }
     }
+
+    pub fn as_wildcard(&self)-> Option<String> {
+        match self {
+            Self::Str(s) => {
+                if s.starts_with(':') {
+                    return Some(s.as_str()[1..s.len()].to_string());
+                }
+                None
+            },
+            _ => None
+        }
+    }
 }
+
+// impl ToOwned for Value {
+//     type Owned = Value;
+
+//     fn to_owned(&self) -> Self::Owned {
+//         self.clone()
+//     }
+// }
 
 impl From<i32> for Value {
     fn from(i: i32) -> Self {
@@ -125,14 +145,16 @@ impl From<&serde_json::Value> for Value {
             Value::I32(val.as_i64().unwrap() as i32)
         } else if val.is_f64() {
             Value::F64(val.as_f64().unwrap())
+        } else if let Some(vv) = val.as_str() {
+            Value::Str(vv.to_string())
         } else {
-            Value::Str(String::new())
+            Value::Str(format!("{}", val))
         }
     }
 }
 
 pub fn parse_json_value(value: &serde_json::Value, key: String) -> Option<serde_json::Value> {
-    let keys = key.split(".");
+    let keys = key.split('.');
     let mut cur_value = value;
     for k in keys {
         if let Some(idx) = parse_number(k) {
