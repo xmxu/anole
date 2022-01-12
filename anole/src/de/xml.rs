@@ -53,7 +53,15 @@ impl De<'_> {
                                 };
                                 false
                             }) {
-                                
+                                match a {
+                                    Ok(_a) => {
+                                        capture = match String::from_utf8(_a.value.to_vec()) {
+                                            Ok(s) => s,
+                                            Err(e) => return Err(crate::error::decode(e.into()))
+                                        }
+                                    },
+                                    Err(e) => return Err(crate::error::decode(e.into())) 
+                                }
                             }
                             break;
                         } else if tag == p {
