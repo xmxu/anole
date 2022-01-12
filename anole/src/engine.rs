@@ -27,6 +27,7 @@ impl Engine {
         }
 
         debug!("store:{:?}", self.ctx.store);
+        self.ctx.store.clear();
         info!("execute completed! cost_time:{:?}", cost.elapsed());
     }
 }

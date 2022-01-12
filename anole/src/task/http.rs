@@ -1,7 +1,7 @@
 use std::{collections::HashMap, time::Duration};
 use reqwest::Response;
 
-use crate::{value::{Value, self}, capture::Capture, context::Context};
+use crate::{value::{Value, self, Body}, capture::Capture, context::Context};
 
 #[derive(Debug)]
 pub enum Method {
@@ -124,7 +124,9 @@ impl HttpTask {
         }
         //body
         if let Some(b) = &self.config.body {
-            request_builder = request_builder.body(b.to_owned());
+            if let Some(bb) = b.as_bytes(ctx) {
+                request_builder = request_builder.body(bb);
+            }
         }
         let rsp = request_builder.send().await.unwrap();
         let is_success = (&rsp.status()).is_success();
@@ -174,7 +176,7 @@ pub struct HttpTaskBuilder {
     pub(crate) header: Option<HashMap<String, Value>>,
     pub(crate) query: Option<HashMap<String, Value>>,
     pub(crate) form: Option<HashMap<String, Value>>,
-    pub(crate) body: Option<bytes::Bytes>,
+    pub(crate) body: Option<Body>,
     pub(crate) capture: Option<Vec<Capture>>,
     pub(crate) verbose: bool,
 }
@@ -239,7 +241,7 @@ impl HttpTaskBuilder {
         self
     }
 
-    pub fn body(mut self, body: bytes::Bytes) ->Self {
+    pub fn body(mut self, body: Body) ->Self {
         self.body = Some(body);
         self
     }

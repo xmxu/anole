@@ -1,7 +1,6 @@
 use serde::Serialize;
 
-use crate::error;
-
+use crate::{context::Context, error};
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -21,7 +20,7 @@ impl Value {
             Self::Bool(v) => Ok(*v as i32),
             Self::Str(v) => match v.parse::<i32>() {
                 Ok(i) => Ok(i),
-                Err(e) => Err(error::parse_value(e.into()))
+                Err(e) => Err(error::parse_value(e.into())),
             },
         }
     }
@@ -34,7 +33,7 @@ impl Value {
             Self::Bool(v) => Ok(*v as u32),
             Self::Str(v) => match v.parse::<u32>() {
                 Ok(u) => Ok(u),
-                Err(e) => Err(error::parse_value(e.into()))
+                Err(e) => Err(error::parse_value(e.into())),
             },
         }
     }
@@ -49,11 +48,11 @@ impl Value {
                     return Ok(1.0);
                 }
                 Ok(0.0)
-            },
+            }
             Self::Str(v) => match v.parse::<f64>() {
                 Ok(f) => Ok(f),
-                Err(e) => Err(error::parse_value(e.into()))
-            }
+                Err(e) => Err(error::parse_value(e.into())),
+            },
         }
     }
 
@@ -65,7 +64,7 @@ impl Value {
             Self::Bool(b) => Ok(*b),
             Self::Str(s) => match s.parse::<bool>() {
                 Ok(b) => Ok(b),
-                Err(e) => Err(error::parse_value(e.into()))
+                Err(e) => Err(error::parse_value(e.into())),
             },
         }
     }
@@ -80,15 +79,15 @@ impl Value {
         }
     }
 
-    pub fn as_wildcard(&self)-> Option<String> {
+    pub fn as_wildcard(&self) -> Option<String> {
         match self {
             Self::Str(s) => {
                 if s.starts_with(':') {
                     return Some(s.as_str()[1..s.len()].to_string());
                 }
                 None
-            },
-            _ => None
+            }
+            _ => None,
         }
     }
 }
@@ -183,13 +182,46 @@ fn parse_number(s: &str) -> Option<usize> {
 impl Serialize for Value {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer {
+        S: serde::Serializer,
+    {
         match self {
             Value::Bool(b) => serializer.serialize_bool(*b),
             Value::I32(v) => serializer.serialize_i32(*v),
             Value::U32(v) => serializer.serialize_u32(*v),
             Value::F64(f) => serializer.serialize_f64(*f),
             Value::Str(s) => serializer.serialize_str(s),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Body {
+    File(String),
+    Raw(bytes::Bytes),
+    Replace(String, Vec<Value>),
+}
+
+impl Body {
+    pub fn as_bytes(&self, ctx: &mut Context) -> Option<bytes::Bytes> {
+        match self {
+            Self::Raw(b) => Some(b.to_owned()),
+            Self::File(path) => {
+                if let Ok(file_content) = std::fs::read(path) {
+                    return Some(bytes::Bytes::from(file_content));
+                }
+                None
+            }
+            Self::Replace(tmpl, values) => {
+                let mut tmpl = tmpl.to_owned();
+                for value in values {
+                    if let Some(wildcard) = value.as_wildcard() {
+                        if let Some(vv) = ctx.store.get(wildcard) {
+                            tmpl = tmpl.replace(&value.as_str(), &vv.as_str());
+                        }
+                    }
+                }
+                Some(tmpl.into())
+            }
         }
     }
 }
