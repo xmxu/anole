@@ -13,6 +13,7 @@ async fn main() {
             .method(Method::Get)
             .capture(vec![
                 capture::json("data.1".to_string(), "tag".to_string()),
+                capture::header("content-length".to_string(), "cl".to_string()),
             ])
             .build())
         .with_http(HttpTaskBuilder::new()
@@ -20,7 +21,6 @@ async fn main() {
             .method(Method::Get)
             .verbose(false)
             .build())
-        .run().await;
-
+        .run().await.unwrap();
     
 }

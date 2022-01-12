@@ -4,7 +4,10 @@ pub(crate) type InnerError = Box<dyn StdError + Send + Sync>;
 
 #[derive(Debug)]
 pub(crate) enum Kind {
-    ParseValue
+    ParseValue,
+    CreateClient,
+    Request,
+    Decode,
 }
 
 pub struct Error {
@@ -26,4 +29,16 @@ impl std::fmt::Debug for Error {
 
 pub(crate) fn parse_value(e: InnerError) -> Error {
     Error::new(Kind::ParseValue, Some(e))
+}
+
+pub(crate) fn decode(e: InnerError) -> Error {
+    Error::new(Kind::Decode, Some(e))
+}
+
+pub(crate) fn create_client(e: InnerError) -> Error {
+    Error::new(Kind::CreateClient, Some(e))
+}
+
+pub(crate) fn request(e: InnerError) -> Error {
+    Error::new(Kind::Request, Some(e))
 }

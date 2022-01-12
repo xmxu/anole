@@ -7,6 +7,7 @@ pub mod engine;
 pub mod task;
 pub mod context;
 pub mod capture;
+pub mod de;
 
 type Result<T> = std::result::Result<T, crate::error::Error>;
 

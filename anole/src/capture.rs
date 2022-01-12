@@ -9,6 +9,20 @@ pub enum Capture {
     Xml(Cap),
 }
 
+impl Capture {
+    pub(crate) fn is_header(&self) -> bool {
+        matches!(self, Self::Header(_))
+    }
+
+    pub(crate) fn is_json(&self) -> bool {
+        matches!(self, Self::Json(_))
+    }
+
+    pub(crate) fn is_xml(&self) -> bool {
+        matches!(self, Self::Xml(_))
+    }
+}
+
 #[derive(Debug)]
 pub struct Cap {
     pub key: String,

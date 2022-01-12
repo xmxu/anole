@@ -20,15 +20,19 @@ impl Engine {
         self
     }
 
-    pub async fn run(mut self) {
+    pub async fn run(mut self) -> crate::Result<()> {
         let cost = Instant::now();
         for ele in self.tasks.into_iter() {
-            ele.execute(self.ctx.as_mut()).await;
+            match ele.execute(self.ctx.as_mut()).await {
+                Ok(_) => continue,
+                Err(e) => return Err(e)
+            };
         }
 
         debug!("store:{:?}", self.ctx.store);
         self.ctx.store.clear();
         info!("execute completed! cost_time:{:?}", cost.elapsed());
+        Ok(())
     }
 }
 
