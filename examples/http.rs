@@ -9,25 +9,25 @@ async fn main() {
     info!("startup");
     Engine::new()
         .with_http(HttpTaskBuilder::new()
-            .url("https://tvapi.dykkan.com/v1/tags".to_string())
+            .url("https://tvapi.dykkan.com/v1/tags")
             .method(Method::Get)
             .capture(vec![
-                capture::json("data.1".to_string(), "tag".to_string()),
-                capture::header("content-length".to_string(), "cl".to_string()),
+                capture::json("data.1", "tag"),
+                capture::header("content-length", "cl"),
             ])
             .build())
         .with_http(HttpTaskBuilder::new()
-            .url("https://tvapi.dykkan.com/v1/tag/:tag".to_string())
+            .url("https://tvapi.dykkan.com/v1/tag/:tag")
             .method(Method::Get)
             .verbose(false)
             .build())
         .with_http(HttpTaskBuilder::new()
-            .url("http://192.168.168.3:9998/repository/maven-releases/com/husky/unity/plugin/core/1.0.3/core-1.0.3.pom".to_string())
+            .url("http://192.168.168.3:9998/repository/maven-releases/com/husky/unity/plugin/core/1.0.3/core-1.0.3.pom")
             .deserializer(Deserializer::Xml)
             .capture(vec![
-                capture::xml("modelVersion".to_string(), "model_version".to_string()),
-                capture::xml("modelVersion".to_string(), "model_version".to_string()),
-                capture::xml("dependencies.dependency|1.groupId".to_string(), "group_id".to_string()),
+                capture::xml("modelVersion", "model_version"),
+                capture::xml("modelVersion", "model_version"),
+                capture::xml("dependencies.dependency|1.groupId", "group_id"),
             ])
             .build())
         .run().await.unwrap();

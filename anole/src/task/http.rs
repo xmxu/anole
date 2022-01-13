@@ -72,13 +72,13 @@ impl From<&Method> for reqwest::Method {
 }
 
 #[derive(Debug)]
-pub struct HttpTask {
-    pub(crate) config: HttpTaskBuilder,
+pub struct HttpTask<'a> {
+    pub(crate) config: HttpTaskBuilder<'a>,
     pub(crate) rsp: Option<Response>,
 }
 
 
-impl HttpTask {
+impl HttpTask<'_> {
     pub async fn execute(mut self, ctx: &mut Context) -> crate::Result<()> {
         let client = match reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(20))
@@ -88,7 +88,7 @@ impl HttpTask {
             Err(e) => return Err(crate::error::create_client(e.into()))
         };
 
-        let mut url = match url::Url::parse(&self.config.url) {
+        let mut url = match url::Url::parse(self.config.url) {
             Ok(u) => u,
             Err(e) => return Err(crate::error::parse_value(e.into()))
         };
@@ -125,8 +125,7 @@ impl HttpTask {
                         *v = wv.to_owned();
                     }
                 }
-                let vstr = v.as_str();
-                request_builder = request_builder.header(k.as_str(), &vstr);
+                request_builder = request_builder.header(*k, v.as_str());
             }
         }
 
@@ -185,7 +184,7 @@ impl HttpTask {
                     let headers = &_rsp.headers().to_owned();
                     for _cap in header_caps {
                         if let Capture::Header(ref _c) = _cap {
-                            if let Some(v) = headers.get(&_c.key) {
+                            if let Some(v) = headers.get(_c.key) {
                                 if let Ok(hv) = v.to_str() {
                                     ctx.store.set(_c.save_key.to_owned(), Value::Str(hv.to_string()));
                                 }
@@ -219,7 +218,7 @@ impl HttpTask {
                         if let Ok(ref b) = &_rsp.text().await {
                             for _cap in xml_caps {
                                 if let Capture::Xml(_c) = _cap {
-                                    if let Ok(cv) = xml::De::get(b, &_c.key) {
+                                    if let Ok(cv) = xml::De::get(b, _c.key) {
                                         ctx.store.set(_c.save_key.to_owned(), cv);
                                     }
                                 }
@@ -234,22 +233,22 @@ impl HttpTask {
 }
 
 #[derive(Debug)]
-pub struct HttpTaskBuilder {
-    pub(crate) url: String,
+pub struct HttpTaskBuilder<'a> {
+    pub(crate) url: &'a str,
     pub(crate) method: Method,
     pub(crate) deserializer: Deserializer,
-    pub(crate) header: Option<HashMap<String, Value>>,
-    pub(crate) query: Option<HashMap<String, Value>>,
-    pub(crate) form: Option<HashMap<String, Value>>,
+    pub(crate) header: Option<HashMap<&'a str, Value>>,
+    pub(crate) query: Option<HashMap<&'a str, Value>>,
+    pub(crate) form: Option<HashMap<&'a str, Value>>,
     pub(crate) body: Option<Body>,
-    pub(crate) capture: Option<Vec<Capture>>,
+    pub(crate) capture: Option<Vec<Capture<'a>>>,
     pub(crate) verbose: bool,
 }
 
-impl HttpTaskBuilder {
+impl<'a> HttpTaskBuilder<'a> {
     pub fn new() -> Self {
         HttpTaskBuilder {
-            url: String::new(),
+            url: "",
             method: Method::Get,
             deserializer: Deserializer::Json,
             header: None,
@@ -261,7 +260,7 @@ impl HttpTaskBuilder {
         }
     }
 
-    pub fn url(mut self, url: String) -> Self {
+    pub fn url(mut self, url: &'a str) -> Self {
         self.url = url;
         self
     }
@@ -276,7 +275,7 @@ impl HttpTaskBuilder {
         self
     }
 
-    pub fn header(mut self, header: (String, Value)) -> Self {
+    pub fn header(mut self, header: (&'a str, Value)) -> Self {
         if self.header.is_none() {
             self.header = Some(HashMap::new())
         }
@@ -286,7 +285,7 @@ impl HttpTaskBuilder {
         self
     }
 
-    pub fn query(mut self, query: (String, Value)) -> Self {
+    pub fn query(mut self, query: (&'a str, Value)) -> Self {
         if self.query.is_none() {
             self.query = Some(HashMap::new())
         }
@@ -296,7 +295,7 @@ impl HttpTaskBuilder {
         self
     }
 
-    pub fn form(mut self, form: (String, Value)) -> Self {
+    pub fn form(mut self, form: (&'a str, Value)) -> Self {
         if self.form.is_none() {
             self.form = Some(HashMap::new())
         }
@@ -311,7 +310,7 @@ impl HttpTaskBuilder {
         self
     }
 
-    pub fn capture(mut self, capture: Vec<Capture>) -> Self {
+    pub fn capture(mut self, capture: Vec<Capture<'a>>) -> Self {
         self.capture = Some(capture);
         self
     }
@@ -329,13 +328,13 @@ impl HttpTaskBuilder {
         None
     }
 
-    pub fn build(self) -> HttpTask {
+    pub fn build(self) -> HttpTask<'a> {
         HttpTask { config: self, rsp: None }
     }
 
 }
 
-impl Default for HttpTaskBuilder {
+impl Default for HttpTaskBuilder<'_> {
     fn default() -> Self {
         Self::new()
     }

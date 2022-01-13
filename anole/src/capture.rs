@@ -2,14 +2,14 @@
 /// 捕获参数
 /// 
 #[derive(Debug)]
-pub enum Capture {
-    Header(Cap),
+pub enum Capture<'a> {
+    Header(Cap<'a>),
     //for body
-    Json(Cap),
-    Xml(Cap),
+    Json(Cap<'a>),
+    Xml(Cap<'a>),
 }
 
-impl Capture {
+impl <'a> Capture<'a> {
     pub(crate) fn is_header(&self) -> bool {
         matches!(self, Self::Header(_))
     }
@@ -24,19 +24,19 @@ impl Capture {
 }
 
 #[derive(Debug)]
-pub struct Cap {
-    pub key: String,
-    pub save_key: String,
+pub struct Cap<'a> {
+    pub key: &'a str,
+    pub save_key: &'a str,
 }
 
-pub fn header(key: String, save_key: String) -> Capture {
+pub fn header<'a>(key: &'a str, save_key: &'a str) -> Capture<'a> {
     Capture::Header(Cap {key, save_key})
 }
 
-pub fn json(key: String, save_key: String) -> Capture {
+pub fn json<'a>(key: &'a str, save_key: &'a str) -> Capture<'a> {
     Capture::Json(Cap {key, save_key})
 }
 
-pub fn xml(key: String, save_key: String) -> Capture {
+pub fn xml<'a>(key: &'a str, save_key: &'a str) -> Capture<'a> {
     Capture::Xml(Cap {key, save_key})
 }

@@ -5,17 +5,17 @@ use log::{debug, info};
 use crate::{context::Context, task::http::HttpTask};
 
 #[derive(Debug)]
-pub struct Engine {
+pub struct Engine<'a> {
     ctx: Box<Context>,
-    tasks: Vec<HttpTask>
+    tasks: Vec<HttpTask<'a>>
 }
 
-impl Engine {
+impl<'a> Engine<'a> {
     pub fn new() -> Self {
         Engine { ctx: Box::new(Context::default()), tasks: vec![] }
     }
 
-    pub fn with_http(mut self, t: HttpTask) -> Self {
+    pub fn with_http(mut self, t: HttpTask<'a>) -> Self {
         self.tasks.push(t);
         self
     }
@@ -36,7 +36,7 @@ impl Engine {
     }
 }
 
-impl Default for Engine {
+impl <'a> Default for Engine<'a> {
     fn default() -> Self {
         Self::new()
     }
