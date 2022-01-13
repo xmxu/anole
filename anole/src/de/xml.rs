@@ -1,13 +1,12 @@
-use std::{path, ops::Index};
 
-use log::{warn, debug};
 use quick_xml::{Reader, events::{Event, BytesStart}};
 
 use crate::value::Value;
 
 
 //xml deserializer base on quick-xml
-
+//support attr => key#attr_key
+//support array => key|idx
 pub struct De<'a> {
     pub buf: &'a str,
     pub paths: &'a str,
@@ -36,7 +35,6 @@ impl De<'_> {
         let mut capture = String::new();
         let mut found = false;
         self.is_attr(paths[idx].to_string());
-        debug!("attr_state:{:?}", self.attr_state);
         self.is_arr(paths[idx].to_string());
         loop {
             match reader.read_event(&mut buf) {
@@ -70,7 +68,6 @@ impl De<'_> {
                                 }
                             }
                         } else if tag == paths[idx] {
-                            debug!("found:{}", tag);
                             found = true;
                             idx += 1;
                             if idx < paths.len() {
@@ -106,16 +103,14 @@ impl De<'_> {
         if let Some(ref _arr_state) = self.arr_state {
             arr_captured = _arr_state.captured();
         }
-        debug!("xml_capture:{:?}", capture);
         if idx < paths.len() - 1 || !arr_captured {
             return Err(crate::error::decode("Not Found".into()));
         }
         Ok(Value::Str(capture))
     }
 
-    fn is_attr<'a>(&mut self, p: String) {
+    fn is_attr(&mut self, p: String) {
         if let Some(idx) = p.find('#') {
-            debug!("is_attr:{:?}", idx);
             self.attr_state = Some(AttrState {
                 tag: p[..idx].to_string(),
                 key: p[idx+1..].to_string(),
@@ -127,11 +122,11 @@ impl De<'_> {
         
     }
 
-    fn is_arr<'a>(&mut self, p: String) {
-        if let Some(idx) = p.find(':') {
+    fn is_arr(&mut self, p: String) {
+        if let Some(idx) = p.find('|') {
             self.arr_state = Some(ArrState {
                 tag: p[..idx].to_string(),
-                idx: p[idx+1..].parse::<usize>().unwrap()
+                idx: p[idx+1..].parse::<usize>().unwrap() as i32
             });
         } else {
             self.arr_state.take();
@@ -158,9 +153,8 @@ impl AttrState {
                         false
                     }
                 },
-                Err(e) => false,
-            };
-            false
+                Err(_) => false,
+            }
         }) {
             match a {
                 Ok(_a) => {
@@ -179,12 +173,12 @@ impl AttrState {
 #[derive(Debug, Clone)]
 struct ArrState {
     tag: String,
-    idx: usize,
+    idx: i32,
 }
 
 impl ArrState {
     fn captured(&self) -> bool {
-        self.idx == 0
+        self.idx < 0
     }
 
     fn reduce(&mut self) {

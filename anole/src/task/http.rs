@@ -1,7 +1,7 @@
 use std::{collections::HashMap, time::Duration};
 use reqwest::Response;
 
-use crate::{value::{Value, self, Body}, capture::Capture, context::Context};
+use crate::{value::{Value, self, Body}, capture::Capture, context::Context, de::xml};
 
 #[derive(Debug)]
 pub enum Method {
@@ -28,8 +28,8 @@ impl Deserializer {
         }
     }
 
-    pub fn xml(&self) -> Option<()> {
-        todo!()
+    pub fn xml(&self) -> Option<&[u8]> {
+        None
     }
 
     pub fn is_json(&self) -> bool {
@@ -215,32 +215,18 @@ impl HttpTask {
                         }
                     }
                 } else if self.config.deserializer.is_xml() {
-
+                    if let Some(ref xml_caps) = self.config.filter_caps(|c| c.is_xml()) {
+                        if let Ok(ref b) = &_rsp.text().await {
+                            for _cap in xml_caps {
+                                if let Capture::Xml(_c) = _cap {
+                                    if let Ok(cv) = xml::De::get(b, &_c.key) {
+                                        ctx.store.set(_c.save_key.to_owned(), cv);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-
-
-                // let body_value = _rsp.json::<serde_json::Value>().await.unwrap();
-                // for _cap in _caps {
-                //     let _ = match _cap {
-                //         Capture::Header(_c) => {
-                //             if let Some(v) = headers.get(&_c.key) {
-                //                 if let Ok(hv) = v.to_str() {
-                //                     ctx.store.set(_c.save_key, Value::Str(hv.to_string()));
-                //                 }
-                //             }
-                //         },
-                //         Capture::Json(_c) => {
-                //             if !body_value.is_null() {
-                //                 if let Some(cv) = value::parse_json_value(&body_value, _c.key) {
-                //                     if !cv.is_null() {
-                //                         ctx.store.set(_c.save_key, Value::from(&cv));
-                //                     }
-                //                 }                               
-                //             }
-                //         },
-                //         _ => ()
-                //     }; 
-                // }
             }
         }
         Ok(())
