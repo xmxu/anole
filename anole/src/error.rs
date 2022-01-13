@@ -42,3 +42,7 @@ pub(crate) fn create_client(e: InnerError) -> Error {
 pub(crate) fn request(e: InnerError) -> Error {
     Error::new(Kind::Request, Some(e))
 }
+
+pub(crate) fn unimplement(e: &str) -> Error {
+    Error::new(Kind::ParseValue, Some(e))
+}

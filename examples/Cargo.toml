@@ -17,3 +17,7 @@ path = "faker.rs"
 [[example]]
 name = "http"
 path = "http.rs"
+
+[[example]]
+name = "mysql"
+path = "mysql.rs"

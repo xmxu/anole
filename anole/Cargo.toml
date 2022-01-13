@@ -17,3 +17,5 @@ log = "0.4.14"
 env_logger = "0.9.0"
 url = "2.2.2"
 quick-xml = "0.22.0"
+# time = "0.3.5"
+sqlx = { version = "0.5", features = [ "runtime-tokio-rustls", "postgres", "mysql", "sqlite", "mssql", "time" ] }

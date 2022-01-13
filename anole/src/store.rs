@@ -8,7 +8,7 @@ pub struct Store {
     pub(crate) data: HashMap<String, Value>,
 }
 
-impl Store {
+impl <'a> Store {
     pub(crate) fn new() -> Store {
         Store { data: HashMap::new() }
     }

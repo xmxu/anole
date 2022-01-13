@@ -1,4 +1,6 @@
+
 use serde::Serialize;
+use sqlx::types::time::{self, Date, Time};
 
 use crate::{context::Context, error};
 
@@ -9,6 +11,8 @@ pub enum Value {
     F64(f64),
     Bool(bool),
     Str(String),
+    Date(time::Date),
+    Time(time::Time),
 }
 
 impl Value {
@@ -22,6 +26,7 @@ impl Value {
                 Ok(i) => Ok(i),
                 Err(e) => Err(error::parse_value(e.into())),
             },
+            _ => Err(error::unimplement("Date or Time can not convert to i32"))
         }
     }
 
@@ -35,6 +40,7 @@ impl Value {
                 Ok(u) => Ok(u),
                 Err(e) => Err(error::parse_value(e.into())),
             },
+            _ => Err(error::unimplement("Date or Time can not convert to u32"))
         }
     }
 
@@ -53,6 +59,7 @@ impl Value {
                 Ok(f) => Ok(f),
                 Err(e) => Err(error::parse_value(e.into())),
             },
+            _ => Err(error::unimplement("Date or Time can not convert to f64"))
         }
     }
 
@@ -66,6 +73,7 @@ impl Value {
                 Ok(b) => Ok(b),
                 Err(e) => Err(error::parse_value(e.into())),
             },
+            _ => Err(error::unimplement("Date or Time can not convert to bool"))
         }
     }
 
@@ -76,6 +84,22 @@ impl Value {
             Self::U32(u) => u.to_string(),
             Self::Bool(b) => b.to_string(),
             Self::F64(f) => f.to_string(),
+            Self::Date(d) => d.to_string(),
+            Self::Time(t) => t.to_string(),
+        }
+    }
+
+    pub fn as_date(&self) -> crate::Result<Date> {
+        match &self {
+            Self::Date(d) => Ok(*d),
+            _ => Err(error::unimplement("can not convert to Date"))
+        }
+    }
+
+    pub fn as_time(&self) -> crate::Result<Time> {
+        match &self {
+            Self::Time(t) => Ok(*t),
+            _ => Err(error::unimplement("can not convert to Time"))
         }
     }
 
@@ -191,6 +215,8 @@ impl Serialize for Value {
             Value::U32(v) => serializer.serialize_u32(*v),
             Value::F64(f) => serializer.serialize_f64(*f),
             Value::Str(s) => serializer.serialize_str(s),
+            Value::Date(d) => serializer.serialize_str(&d.to_string()),
+            Value::Time(t) => serializer.serialize_u16(t.millisecond()),
         }
     }
 }
