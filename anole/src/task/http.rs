@@ -81,7 +81,7 @@ pub struct HttpTask<'a> {
 impl HttpTask<'_> {
     pub async fn execute(mut self, ctx: &mut Context) -> crate::Result<()> {
         let client = match reqwest::Client::builder()
-        .connect_timeout(Duration::from_secs(20))
+        .connect_timeout(Duration::from_secs(5))
         .connection_verbose(self.config.verbose)
         .user_agent(format!("anole_client_{}", env!("CARGO_PKG_VERSION"))).build() {
             Ok(c) => c,

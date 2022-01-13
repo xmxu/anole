@@ -1,5 +1,5 @@
 
-use std::vec;
+use std::{vec, time::Duration};
 
 use log::debug;
 use sqlx::{mysql::*, Pool, Row, types::time};
@@ -153,6 +153,8 @@ impl MysqlClient {
 
     async fn create(&mut self, options: DBClientOption<'_>) -> crate::Result<()> {
         let pool = match MySqlPoolOptions::new()
+            .connect_timeout(Duration::from_secs(5))
+            .idle_timeout(Duration::from_secs(20))
             .max_connections(options.max_connections)
             .connect(options.url).await {
                 Ok(p) => p,
