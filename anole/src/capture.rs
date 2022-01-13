@@ -1,6 +1,3 @@
-use sqlx::{Decode, Database, Type};
-
-use crate::value::Value;
 
 /// 捕获参数
 /// 
@@ -26,9 +23,6 @@ impl <'a> Capture<'a> {
         matches!(self, Self::Xml(_))
     }
 
-    pub(crate) fn is_column(&self) -> bool {
-        matches!(self, Self::Column(_))
-    }
 }
 
 #[derive(Debug)]

@@ -1,10 +1,10 @@
 
-use std::{collections::HashMap, vec};
+use std::vec;
 
 use log::debug;
-use sqlx::{mysql::*, ConnectOptions, Pool, Executor, Row, Column, types::time};
+use sqlx::{mysql::*, Pool, Row, types::time};
 
-use crate::{context::Context, task, capture::{Capture, Cap}, value::Value};
+use crate::{context::Context, task, capture::Capture, value::Value};
 
 use super::DBClientOption;
 
@@ -13,14 +13,13 @@ use super::DBClientOption;
 pub struct MysqlTask<'a> {
     //options
     options: Option<DBClientOption<'a>>,
-    client: Option<MysqlClient>,
     tasks: Vec<DBTask<'a>>,
 }
 
 impl <'a> MysqlTask<'a> {
     
     pub fn new() -> Self {
-        MysqlTask { options: None, client: None, tasks: vec![] }
+        MysqlTask { options: None, tasks: vec![] }
     }
 
     pub fn options(mut self, options: task::db::DBClientOption<'a>) -> Self {
