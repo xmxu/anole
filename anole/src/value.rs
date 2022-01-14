@@ -8,6 +8,8 @@ use crate::{context::Context, error};
 pub enum Value {
     I32(i32),
     U32(u32),
+    I64(i64),
+    U64(u64),
     F64(f64),
     Bool(bool),
     Str(String),
@@ -26,7 +28,7 @@ impl Value {
                 Ok(i) => Ok(i),
                 Err(e) => Err(error::parse_value(e.into())),
             },
-            _ => Err(error::unimplement("Date or Time can not convert to i32"))
+            _ => Err(error::unimplement("can not convert to i32"))
         }
     }
 
@@ -40,7 +42,39 @@ impl Value {
                 Ok(u) => Ok(u),
                 Err(e) => Err(error::parse_value(e.into())),
             },
-            _ => Err(error::unimplement("Date or Time can not convert to u32"))
+            _ => Err(error::unimplement("can not convert to u32"))
+        }
+    }
+
+    pub fn as_i64(&self) -> crate::Result<i64> {
+        match &self {
+            Self::I32(v) => Ok(*v as i64),
+            Self::U32(v) => Ok(*v as i64),
+            Self::I64(v) => Ok(*v),
+            Self::U64(v) => Ok(*v as i64),
+            Self::F64(v) => Ok(*v as i64),
+            Self::Bool(v) => Ok(*v as i64),
+            Self::Str(v) => match v.parse::<i64>() {
+                Ok(i) => Ok(i),
+                Err(e) => Err(error::parse_value(e.into())),
+            },
+            _ => Err(error::unimplement("can not convert to i64"))
+        }
+    }
+
+    pub fn as_u64(&self) -> crate::Result<u64> {
+        match &self {
+            Self::I32(v) => Ok(*v as u64),
+            Self::U32(v) => Ok(*v as u64),
+            Self::I64(v) => Ok(*v as u64),
+            Self::U64(v) => Ok(*v),
+            Self::F64(v) => Ok(*v as u64),
+            Self::Bool(v) => Ok(*v as u64),
+            Self::Str(v) => match v.parse::<u64>() {
+                Ok(u) => Ok(u),
+                Err(e) => Err(error::parse_value(e.into())),
+            },
+            _ => Err(error::unimplement("can not convert to u64"))
         }
     }
 
@@ -49,6 +83,8 @@ impl Value {
             Self::I32(v) => Ok(*v as f64),
             Self::U32(v) => Ok(*v as f64),
             Self::F64(v) => Ok(*v),
+            Self::I64(v) => Ok(*v as f64),
+            Self::U64(v) => Ok(*v as f64),
             Self::Bool(v) => {
                 if *v {
                     return Ok(1.0);
@@ -59,7 +95,7 @@ impl Value {
                 Ok(f) => Ok(f),
                 Err(e) => Err(error::parse_value(e.into())),
             },
-            _ => Err(error::unimplement("Date or Time can not convert to f64"))
+            _ => Err(error::unimplement("can not convert to f64"))
         }
     }
 
@@ -67,6 +103,8 @@ impl Value {
         match &self {
             Self::I32(i) => Ok(*i > 0),
             Self::U32(u) => Ok(*u > 0),
+            Self::I64(u) => Ok(*u > 0),
+            Self::U64(u) => Ok(*u > 0),
             Self::F64(f) => Ok(*f > 0.0),
             Self::Bool(b) => Ok(*b),
             Self::Str(s) => match s.parse::<bool>() {
@@ -82,6 +120,8 @@ impl Value {
             Self::Str(s) => s.to_string(),
             Self::I32(i) => i.to_string(),
             Self::U32(u) => u.to_string(),
+            Self::I64(i) => i.to_string(),
+            Self::U64(u) => u.to_string(),
             Self::Bool(b) => b.to_string(),
             Self::F64(f) => f.to_string(),
             Self::Date(d) => d.to_string(),
@@ -213,6 +253,8 @@ impl Serialize for Value {
             Value::Bool(b) => serializer.serialize_bool(*b),
             Value::I32(v) => serializer.serialize_i32(*v),
             Value::U32(v) => serializer.serialize_u32(*v),
+            Value::I64(v) => serializer.serialize_i64(*v),
+            Value::U64(v) => serializer.serialize_u64(*v),
             Value::F64(f) => serializer.serialize_f64(*f),
             Value::Str(s) => serializer.serialize_str(s),
             Value::Date(d) => serializer.serialize_str(&d.to_string()),

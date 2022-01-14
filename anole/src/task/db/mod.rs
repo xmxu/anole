@@ -14,9 +14,9 @@ pub struct DBClientOption<'a> {
 
 }
 
-impl <'a> DBClientOption<'a> {
+impl<'a> DBClientOption<'a> {
     
-    pub fn new() -> Self {
+    pub fn builder() -> Self {
         DBClientOption { url: "", max_connections: 10 }
     }
 

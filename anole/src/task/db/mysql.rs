@@ -16,12 +16,12 @@ pub struct MysqlTask<'a> {
     tasks: Vec<DBTask<'a>>,
 }
 
-impl <'a> MysqlTask<'a> {
-    
-    pub fn new() -> Self {
+impl<'a> MysqlTask<'a> {
+
+    pub fn default() -> Self {
         MysqlTask { options: None, tasks: vec![] }
     }
-
+    
     pub fn options(mut self, options: task::db::DBClientOption<'a>) -> Self {
         self.options = Some(options);
         self
@@ -51,8 +51,6 @@ impl <'a> MysqlTask<'a> {
         }
         Ok(())
     }
-
-
 }
 
 #[derive(Debug)]
@@ -84,7 +82,7 @@ impl <'a> DBTask<'a> {
         self
     }
 
-    pub(crate) fn handle_rows(&self, rows: Vec<MySqlRow>, ctx: &mut Context) -> crate::Result<()> {
+    pub(crate) fn handle_rows(&self, rows: &[MySqlRow], ctx: &mut Context) -> crate::Result<()> {
         if self.capture.is_none() {
             return Ok(())
         }
@@ -92,37 +90,49 @@ impl <'a> DBTask<'a> {
             return Ok(())
         }
         if let Some(ref _caps) = self.capture {
-            for (idx, r) in rows.into_iter().enumerate() {
+            for (idx, r) in rows.iter().enumerate() {
                 for _cap in _caps {
                     if let Capture::Column(ref _c) = _cap {
-                        ctx.store.set(_c.save_key.to_owned(), Value::U32(idx as u32));
+                        let mut _save_key = _c.save_key.to_owned();
+                        if rows.len() > 1 {
+                            _save_key = _save_key + "|" + &idx.to_string();
+                            ctx.store.set(_c.save_key.to_owned(), Value::U32(idx as u32));
+                        }
                         if _c.is_usize() {
                             if let Ok(vv) = r.try_get::<i64, &str>(_c.key) {
-                                ctx.store.set(_c.save_key.to_owned() + "|" + &idx.to_string(), Value::U32(vv as u32));
+                                ctx.store.set(_save_key, Value::I64(vv));
                             }
-                        } else if _c.is_i32() || _c.is_i64() {
+                        } else if _c.is_i32() {
                             if let Ok(vv) = r.try_get::<i32, &str>(_c.key) {
-                                ctx.store.set(_c.save_key.to_owned() + "|" + &idx.to_string(), Value::I32(vv));
+                                ctx.store.set(_save_key, Value::I32(vv));
                             }
-                        } else if _c.is_u32() || _c.is_u64() {
+                        } else if _c.is_u32() {
                             if let Ok(vv) = r.try_get::<u32, &str>(_c.key) {
-                                ctx.store.set(_c.save_key.to_owned() + "|" + &idx.to_string(), Value::U32(vv));
+                                ctx.store.set(_save_key, Value::U32(vv));
+                            }
+                        } else if _c.is_i64() {
+                            if let Ok(vv) = r.try_get::<i64, &str>(_c.key) {
+                                ctx.store.set(_save_key, Value::I64(vv));
+                            }
+                        } else if _c.is_u64() {
+                            if let Ok(vv) = r.try_get::<u64, &str>(_c.key) {
+                                ctx.store.set(_save_key, Value::U64(vv));
                             }
                         } else if _c.is_bool() {
                             if let Ok(vv) = r.try_get::<bool, &str>(_c.key) {
-                                ctx.store.set(_c.save_key.to_owned() + "|" + &idx.to_string(), Value::Bool(vv));
+                                ctx.store.set(_save_key, Value::Bool(vv));
                             }
                         } else if _c.is_str() {
                             if let Ok(vv) = r.try_get::<&str, &str>(_c.key) {
-                                ctx.store.set(_c.save_key.to_owned() + "|" + &idx.to_string(), Value::Str(vv.to_string()));
+                                ctx.store.set(_save_key, Value::Str(vv.to_string()));
                             }
                         } else if _c.is_date() {
                             if let Ok(vv) = r.try_get::<time::Date, &str>(_c.key) {
-                                ctx.store.set(_c.save_key.to_owned() + "|" + &idx.to_string(), Value::Date(vv));
+                                ctx.store.set(_save_key, Value::Date(vv));
                             }
                         } else if _c.is_time() {
                             if let Ok(vv) = r.try_get::<time::Time, &str>(_c.key) {
-                                ctx.store.set(_c.save_key.to_owned() + "|" + &idx.to_string(), Value::Time(vv));
+                                ctx.store.set(_save_key, Value::Time(vv));
                             }
                         } else {
                             return Err(crate::error::unimplement("unsupport type"));
@@ -185,7 +195,7 @@ impl MysqlClient {
             Ok(r) => r,
             Err(e) => return Err(crate::error::request(e.into()))
         };
-        t.handle_rows(rows, ctx)
+        t.handle_rows(&rows, ctx)
         // for r in rows {
         //     debug!("column_name:{:?}", r.get::<&str, usize>(0));
         //     let date: time::Date = r.get(1);

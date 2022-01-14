@@ -9,7 +9,7 @@ pub mod db;
 
 #[derive(Debug)]
 pub enum Task<'a> {
-    Http(HttpTask<'a>),
+    Http(Box<HttpTask<'a>>),
     Mysql(MysqlTask<'a>),
 }
 
@@ -24,7 +24,7 @@ impl<'a> Task<'a> {
 
 impl<'a> From<HttpTask<'a>> for Task<'a> {
     fn from(t: HttpTask<'a>) -> Self {
-        Task::Http(t)
+        Task::Http(Box::new(t))
     }
 }
 

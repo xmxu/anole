@@ -9,8 +9,8 @@ async fn main() {
     env_logger::init();
     info!("startup");
     Engine::new()
-        .with_mysql(MysqlTask::new()
-            .options(DBClientOption::new().url("mysql://root:hsq847@localhost/anole").max_connections(5))
+        .with_mysql(MysqlTask::default()
+            .options(DBClientOption::builder().url("mysql://root:hsq847@localhost/anole").max_connections(5))
             .with_task(DBTask::new("SELECT count(*) as count FROM tbl_order")
                 .capture(vec![
                     capture::column("count", "order_count", capture::CapValueType::Size)
