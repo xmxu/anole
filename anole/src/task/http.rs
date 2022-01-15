@@ -1,7 +1,7 @@
 use std::{collections::HashMap, time::Duration};
 use reqwest::Response;
 
-use crate::{value::{Value, self, Body}, capture::Capture, context::Context, de::xml};
+use crate::{value::{Value, self, Body}, capture::Capture, context::Context, de::xml, report::ReportItem};
 
 #[derive(Debug)]
 pub enum Method {
@@ -75,11 +75,12 @@ impl From<&Method> for reqwest::Method {
 pub struct HttpTask<'a> {
     pub(crate) config: HttpTaskBuilder<'a>,
     pub(crate) rsp: Option<Response>,
+    pub(crate) task_id: String,
 }
 
 
 impl HttpTask<'_> {
-    pub async fn execute(mut self, ctx: &mut Context) -> crate::Result<()> {
+    pub async fn execute(mut self, ctx: &mut Context) -> crate::Result<ReportItem> {
         let client = match reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(5))
         .connection_verbose(self.config.verbose)
@@ -163,12 +164,19 @@ impl HttpTask<'_> {
             Ok(r) => r,
             Err(e) => return Err(crate::error::request(e.into()))
         };
+        let status_code = &rsp.status().as_u16();
+        let task_id = self.task_id.to_owned();
         let is_success = (&rsp.status()).is_success();
         if is_success {
+            
             self.rsp = Some(rsp);
-            self.capture(ctx).await
+            match self.capture(ctx).await {
+                Ok(_) => Ok(ReportItem::new(task_id, *status_code as i32, format!("rsp succeed"))),
+                Err(e) => return Err(e)
+            }
+
         } else {
-            Ok(())
+            Ok(ReportItem::new(task_id, *status_code as i32, format!("rsp is not success")))
         }
         
     }
@@ -329,7 +337,7 @@ impl<'a> HttpTaskBuilder<'a> {
     }
 
     pub fn build(self) -> HttpTask<'a> {
-        HttpTask { config: self, rsp: None }
+        HttpTask { config: self, rsp: None, task_id: crate::faker::uuid_v4() }
     }
 
 }

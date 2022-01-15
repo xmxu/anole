@@ -2,11 +2,11 @@ use std::time::Instant;
 
 use log::{debug, info};
 
+use crate::report::Reporter;
 use crate::task::Task;
 use crate::{context::Context, task::http::HttpTask};
 use crate::task::db::mysql::MysqlTask;
 
-#[derive(Debug)]
 pub struct Engine<'a> {
     ctx: Box<Context>,
     tasks: Vec<Task<'a>>,
@@ -14,7 +14,7 @@ pub struct Engine<'a> {
 
 impl<'a> Engine<'a> {
     pub fn new() -> Self {
-        Engine { ctx: Box::new(Context::default()), tasks: vec![] }
+        Engine { ctx: Box::new(Context::new()), tasks: vec![] }
     }
 
     pub fn with_http(mut self, t: HttpTask<'a>) -> Self {
@@ -27,11 +27,19 @@ impl<'a> Engine<'a> {
         self
     }
 
+    pub fn with_reporter(mut self, r: Box<dyn Reporter>) -> Self {
+        self.ctx.with_reporter(r);
+        self
+    }
+
     pub async fn run(mut self) -> crate::Result<()> {
         let cost = Instant::now();
         for ele in self.tasks.into_iter() {
             match ele.execute(self.ctx.as_mut()).await {
-                Ok(_) => continue,
+                Ok(r) => {
+                    self.ctx.report(r);
+                    continue;
+                },
                 Err(e) => return Err(e)
             };
         }

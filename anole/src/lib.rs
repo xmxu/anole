@@ -8,6 +8,7 @@ pub mod task;
 pub mod context;
 pub mod capture;
 pub mod de;
+pub mod report;
 
 type Result<T> = std::result::Result<T, crate::error::Error>;
 

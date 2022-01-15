@@ -4,7 +4,7 @@ use std::{vec, time::Duration};
 use log::debug;
 use sqlx::{mysql::*, Pool, Row, types::time};
 
-use crate::{context::Context, task, capture::Capture, value::Value};
+use crate::{context::Context, task, capture::Capture, value::Value, faker, report::ReportItem};
 
 use super::DBClientOption;
 
@@ -32,7 +32,7 @@ impl<'a> MysqlTask<'a> {
         self
     }
 
-    pub async fn execute(self, ctx: &mut Context) -> crate::Result<()> {
+    pub async fn execute(self, ctx: &mut Context) -> crate::Result<ReportItem> {
         let options = match self.options {
             Some(o) => o,
             None => return Err(crate::error::create_client("DBClientOptions Empty".into()))
@@ -49,7 +49,7 @@ impl<'a> MysqlTask<'a> {
                 Err(e) => return Err(e)
             }
         }
-        Ok(())
+        Ok(ReportItem::new("".to_string(), 0, "".to_string()))
     }
 }
 
@@ -58,7 +58,8 @@ pub struct DBTask<'a> {
     // client: Vec<dyn DBClient>
     pub sql: &'a str,
     params: Option<Vec<&'a str>>,
-    capture: Option<Vec<Capture<'a>>>
+    capture: Option<Vec<Capture<'a>>>,
+    pub task_id: String,
 }
 
 impl <'a> DBTask<'a> {
@@ -67,7 +68,8 @@ impl <'a> DBTask<'a> {
         DBTask {
             sql,
             params: None,
-            capture: None
+            capture: None,
+            task_id: faker::uuid_v4(),
         }
     }
 

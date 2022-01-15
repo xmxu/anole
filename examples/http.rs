@@ -1,4 +1,6 @@
-use anole::{engine::Engine, task::http::{HttpTaskBuilder, Method, Deserializer}, capture};
+use std::sync;
+
+use anole::{engine::Engine, task::http::{HttpTaskBuilder, Method, Deserializer}, capture, report::{ReportItem, StdReporter}};
 
 #[macro_use]
 extern crate log;
@@ -7,7 +9,17 @@ extern crate log;
 async fn main() {
     env_logger::init();
     info!("startup");
+
+    let (sender, recv) = sync::mpsc::channel::<ReportItem>();
+
+    tokio::spawn(async {
+        for r in recv {
+            info!("report:{:?}", r);
+        }
+    });
+
     Engine::new()
+        .with_reporter(Box::new(StdReporter::new(sender)))
         .with_http(HttpTaskBuilder::new()
             .url("https://tvapi.dykkan.com/v1/tags")
             .method(Method::Get)
@@ -31,5 +43,7 @@ async fn main() {
             ])
             .build())
         .run().await.unwrap();
+
+    
     
 }
