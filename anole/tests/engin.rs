@@ -1,5 +1,5 @@
 
-use anole::{engine::Engine, task::http::{HttpTaskBuilder, Method, Deserializer}, capture};
+use anole::{engine::Engine, task::http::{HttpTaskBuilder, Method}, capture};
 
 #[macro_use]
 extern crate log;

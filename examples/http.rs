@@ -1,6 +1,6 @@
-use std::sync;
+use std::{sync, time::Instant};
 
-use anole::{engine::Engine, task::http::{HttpTaskBuilder, Method, Deserializer}, capture, report::{ReportItem, StdReporter}};
+use anole::{engine::Engine, task::http::{HttpTaskBuilder, Method, Deserializer}, capture, report::{ReportItem, StdReporter}, value::Value};
 
 #[macro_use]
 extern crate log;
@@ -10,11 +10,13 @@ async fn main() {
     env_logger::init();
     info!("startup");
 
+    let cost = Instant::now();
+
     let (sender, recv) = sync::mpsc::channel::<ReportItem>();
 
-    tokio::spawn(async {
+    let reporter_printer = tokio::spawn(async {
         for r in recv {
-            info!("report:{:?}", r);
+            info!("{}", r);
         }
     });
 
@@ -26,7 +28,9 @@ async fn main() {
             .capture(vec![
                 capture::json("data.1", "tag"),
                 capture::header("content-length", "cl"),
+                capture::json("code", "code")
             ])
+            .expect(("code", Value::I32(0)))
             .build())
         .with_http(HttpTaskBuilder::new()
             .url("https://tvapi.dykkan.com/v1/tag/:tag")
@@ -44,6 +48,9 @@ async fn main() {
             .build())
         .run().await.unwrap();
 
+        reporter_printer.await.unwrap();
+
+        info!("execute completed! cost_time:{:?}", cost.elapsed());
     
     
 }

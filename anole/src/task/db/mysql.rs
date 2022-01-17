@@ -1,8 +1,7 @@
 
 use std::{vec, time::Duration};
 
-use log::debug;
-use sqlx::{mysql::*, Pool, Row, types::time};
+use sqlx::{mysql::{self, *}, Pool, Row, types::time, ConnectOptions};
 
 use crate::{context::Context, task, capture::Capture, value::Value, faker, report::ReportItem};
 
@@ -32,7 +31,7 @@ impl<'a> MysqlTask<'a> {
         self
     }
 
-    pub async fn execute(&self, ctx: &mut Context) -> crate::Result<ReportItem> {
+    pub async fn execute(&self, ctx: &mut Context) -> crate::Result<()> {
         let options = match &self.options {
             Some(o) => o,
             None => return Err(crate::error::create_client("DBClientOptions Empty".into()))
@@ -45,20 +44,23 @@ impl<'a> MysqlTask<'a> {
 
         for tt in &self.tasks {
             match client.execute(tt, ctx).await {
-                Ok(_) => continue,
+                Ok(r) => {
+                    ctx.report(r);
+                    continue;
+                },
                 Err(e) => return Err(e)
             }
         }
-        Ok(ReportItem::new("".to_string(), 0, "".to_string()))
+        Ok(())
     }
 }
 
 #[derive(Debug)]
 pub struct DBTask<'a> {
-    // client: Vec<dyn DBClient>
     pub sql: &'a str,
     params: Option<Vec<&'a str>>,
     capture: Option<Vec<Capture<'a>>>,
+    expect: Option<(&'a str, Value)>,
     pub task_id: String,
 }
 
@@ -70,6 +72,7 @@ impl <'a> DBTask<'a> {
             params: None,
             capture: None,
             task_id: faker::uuid_v4(),
+            expect: None,
         }
     }
 
@@ -84,13 +87,12 @@ impl <'a> DBTask<'a> {
         self
     }
 
-    pub(crate) fn handle_rows(&self, rows: &[MySqlRow], ctx: &mut Context) -> crate::Result<()> {
-        if self.capture.is_none() {
-            return Ok(())
-        }
-        if rows.is_empty() {
-            return Ok(())
-        }
+    pub fn expect(mut self, tup: (&'a str, Value)) -> Self {
+        self.expect = Some(tup);
+        self
+    }
+
+    pub(crate) fn handle_rows(&self, rows: &[MySqlRow], ctx: &mut Context) -> crate::Result<ReportItem> {
         if let Some(ref _caps) = self.capture {
             for (idx, r) in rows.iter().enumerate() {
                 for _cap in _caps {
@@ -141,20 +143,27 @@ impl <'a> DBTask<'a> {
                         }
                     }
                 }
-                // debug!("column_name:{:?}", r.get::<&str, usize>(0));
-                // let date: time::Date = r.get(1);
-                // debug!("column_date:{}", date);
             }
         }
-        Ok(())
+
+        let task_id = self.task_id.to_owned();
+        let status_code: i32 = 0;
+        if let Some(_expect) = &self.expect {
+            if let Some(_value) = ctx.store.get(_expect.0.to_string()) {
+                if _value == &_expect.1 {
+                    return Ok(ReportItem::success(&task_id, status_code, format!("{} expect {:?} pass", _expect.0, _expect.1)))
+                } else {
+                    return Ok(ReportItem::failed(&task_id, status_code, format!("{} expect {:?} but {:?}", _expect.0, _expect.1, _value)))
+                }
+            } else {
+                return Ok(ReportItem::failed(&task_id, status_code, format!("{} expect {:?} but not found", _expect.0, _expect.1)))
+            }
+        }
+
+        Ok(ReportItem::success(&task_id, status_code, "database execute succeed".to_string()))
     }
 
 }
-
-// trait DBClient {
-//     fn create(&mut self, options: DBClientOption);
-//     fn execute<R>(&mut self, sql: &str) -> R;
-// }
 
 #[derive(Debug, Default)]
 struct MysqlClient {
@@ -164,11 +173,16 @@ struct MysqlClient {
 impl MysqlClient {
 
     async fn create(&mut self, options: &DBClientOption<'_>) -> crate::Result<()> {
+        let mut opts = match options.url.parse::<mysql::MySqlConnectOptions>() {
+            Ok(o) => o,
+            Err(e) => return Err(crate::error::create_client(e.into()))
+        };
+        opts.disable_statement_logging();
         let pool = match MySqlPoolOptions::new()
             .connect_timeout(Duration::from_secs(5))
             .idle_timeout(Duration::from_secs(20))
             .max_connections(options.max_connections)
-            .connect(options.url).await {
+            .connect_with(opts).await {
                 Ok(p) => p,
                 Err(e) => return Err(crate::error::create_client(e.into()))
             };
@@ -178,32 +192,23 @@ impl MysqlClient {
         Ok(())
     }
 
-    async fn execute(&self, t: &DBTask<'_>, ctx: &mut Context) -> crate::Result<()> {
+    async fn execute(&self, t: &DBTask<'_>, ctx: &mut Context) -> crate::Result<ReportItem> {
         let pool = &self.pool.as_ref().unwrap();
 
         let mut sql = t.sql.to_owned();
 
         if let Some(_params) = &t.params {
-            // let _params = _params.to_owned();
             for _k in _params {
                 if let Some(v) = ctx.store.get(_k.to_string()) {
                     sql = sql.replace(format!("#{}#", _k).as_str(), v.as_str().as_str());
                 }
             }
         }
-        debug!("execute_sql:{}", sql);
-
         let rows = match sqlx::query(&sql).fetch_all(*pool).await {
             Ok(r) => r,
             Err(e) => return Err(crate::error::request(e.into()))
         };
         t.handle_rows(&rows, ctx)
-        // for r in rows {
-        //     debug!("column_name:{:?}", r.get::<&str, usize>(0));
-        //     let date: time::Date = r.get(1);
-        //     debug!("column_date:{}", date);
-        // }
-        // Ok(())
     }
 
 }

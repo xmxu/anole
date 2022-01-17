@@ -79,7 +79,7 @@ pub struct HttpTask<'a> {
 
 
 impl HttpTask<'_> {
-    pub async fn execute(&mut self, ctx: &mut Context) -> crate::Result<ReportItem> {
+    pub async fn execute(&mut self, ctx: &mut Context) -> crate::Result<()> {
         let client = match reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(5))
         .connection_verbose(self.config.verbose)
@@ -166,18 +166,29 @@ impl HttpTask<'_> {
         let status_code = &rsp.status().as_u16();
         let task_id = self.task_id.to_owned();
         let is_success = (&rsp.status()).is_success();
+        let mut report_item = ReportItem::failed(&task_id, *status_code as i32, "http request failed".to_string());
         if is_success {
-            
-            // self.rsp = Some(rsp);
             match self.capture(ctx, rsp).await {
-                Ok(_) => Ok(ReportItem::new(task_id, *status_code as i32, "rsp succeed".to_string())),
-                Err(e) => Err(e)
+                Ok(_) => {
+                    if let Some(_expect) = &self.config.expect {
+                        if let Some(_capture_value) = ctx.store.get(_expect.0.to_string()) {
+                            if _expect.1 == *_capture_value {
+                                report_item = ReportItem::success(&task_id, *status_code as i32, format!("{} expect pass", _expect.0));
+                            } else {
+                                report_item = ReportItem::failed(&task_id, *status_code as i32, format!("{} expect {:?} but {:?}", _expect.0, _expect.1, _capture_value));
+                            }
+                        } else {
+                            report_item = ReportItem::failed(&task_id, *status_code as i32, format!("{} expect {:?} but not found", _expect.0, _expect.1));
+                        }
+                    } else {
+                        report_item = ReportItem::success(&task_id, *status_code as i32, "http request succeed".to_string());
+                    }
+                },
+                Err(e) => return Err(e)
             }
-
-        } else {
-            Ok(ReportItem::new(task_id, *status_code as i32, "rsp is not success".to_string()))
-        }
-        
+        } 
+        ctx.report(report_item);
+        Ok(())
     }
 
     pub(crate) async fn capture(&mut self, ctx: &mut Context, rsp: Response) -> crate::Result<()> {
@@ -246,6 +257,7 @@ pub struct HttpTaskBuilder<'a> {
     pub(crate) body: Option<Body>,
     pub(crate) capture: Option<Vec<Capture<'a>>>,
     pub(crate) verbose: bool,
+    pub(crate) expect: Option<(&'a str, Value)>,
 }
 
 impl<'a> HttpTaskBuilder<'a> {
@@ -259,7 +271,8 @@ impl<'a> HttpTaskBuilder<'a> {
             form: None,
             body: None,
             capture: None,
-            verbose: false
+            verbose: false,
+            expect: None,
         }
     }
 
@@ -320,6 +333,11 @@ impl<'a> HttpTaskBuilder<'a> {
 
     pub fn verbose(mut self, verbose: bool) -> Self {
         self.verbose = verbose;
+        self
+    }
+
+    pub fn expect(mut self, tup: (&'a str, Value)) -> Self {
+        self.expect = Some(tup);
         self
     }
 

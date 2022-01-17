@@ -5,6 +5,7 @@ use sqlx::types::time::{self, Date, Time};
 use crate::{context::Context, error};
 
 #[derive(Debug, Clone)]
+#[derive(std::cmp::PartialEq)]
 pub enum Value {
     I32(i32),
     U32(u32),

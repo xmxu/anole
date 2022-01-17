@@ -1,4 +1,4 @@
-use crate::{context::Context, report::ReportItem};
+use crate::context::Context;
 
 use self::{http::HttpTask, db::mysql::MysqlTask};
 
@@ -14,7 +14,7 @@ pub enum Task<'a> {
 }
 
 impl<'a> Task<'a> {
-    pub async fn execute(&mut self, ctx: &mut Context) -> crate::Result<ReportItem> {
+    pub async fn execute(&mut self, ctx: &mut Context) -> crate::Result<()> {
         match self {
             Self::Http(t) => t.execute(ctx).await,
             Self::Mysql(t) => t.execute(ctx).await

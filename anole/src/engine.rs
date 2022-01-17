@@ -1,6 +1,6 @@
-use std::time::Instant;
 
-use log::{debug, info};
+
+use log::debug;
 
 use crate::report::Reporter;
 use crate::task::Task;
@@ -33,20 +33,15 @@ impl<'a> Engine<'a> {
     }
 
     pub async fn run(mut self) -> crate::Result<()> {
-        let cost = Instant::now();
         for mut ele in self.tasks.into_iter() {
             match ele.execute(self.ctx.as_mut()).await {
-                Ok(r) => {
-                    self.ctx.report(r);
-                    continue;
-                },
+                Ok(_) => continue,
                 Err(e) => return Err(e)
             };
         }
 
         debug!("store:{:?}", self.ctx.store);
         self.ctx.store.clear();
-        info!("execute completed! cost_time:{:?}", cost.elapsed());
         Ok(())
     }
 }
