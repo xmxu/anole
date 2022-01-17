@@ -200,7 +200,7 @@ impl MysqlClient {
         if let Some(_params) = &t.params {
             for _k in _params {
                 if let Some(v) = ctx.store.get(_k.to_string()) {
-                    sql = sql.replace(format!("#{}#", _k).as_str(), v.as_str().as_str());
+                    sql = sql.replace(format!(":{}", _k).as_str(), v.as_str().as_str());
                 }
             }
         }

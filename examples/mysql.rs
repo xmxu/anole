@@ -29,7 +29,7 @@ async fn main() {
                 .capture(vec![
                     capture::column("count", "order_count", capture::CapValueType::Size)
                 ]).expect(("order_count", value::Value::I64(1))))
-            .with_task(DBTask::new("SELECT name, create_time FROM tbl_order LIMIT #order_count#")
+            .with_task(DBTask::new("SELECT name, create_time FROM tbl_order LIMIT :order_count")
             .param("order_count")
             .capture(vec![
                 capture::column("name", "order_name", capture::CapValueType::Str),

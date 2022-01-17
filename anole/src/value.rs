@@ -221,14 +221,14 @@ pub fn parse_json_value(value: &serde_json::Value, key: String) -> Option<serde_
     let keys = key.split('.');
     let mut cur_value = value;
     for k in keys {
-        if let Some(idx) = parse_number(k) {
+        let (is_arr, k, idx) = try_as_array(k);
+        cur_value = &cur_value[k];
+        if is_arr {
             if cur_value.is_array() && cur_value.as_array().unwrap().len() > idx {
                 cur_value = &cur_value[idx];
             } else {
                 return None;
             }
-        } else {
-            cur_value = &cur_value[k];
         }
     }
     if cur_value != value {
@@ -237,12 +237,13 @@ pub fn parse_json_value(value: &serde_json::Value, key: String) -> Option<serde_
     None
 }
 
-
-fn parse_number(s: &str) -> Option<usize> {
-    if let Ok(i) = s.parse::<usize>() {
-        return Some(i);
+fn try_as_array(k: &str) -> (bool, &str, usize) {
+    if let Some(find_idx) = k.find('|') {
+        if let Ok(idx) = k[find_idx+1..].parse::<usize>() {
+            return (true, &k[..find_idx], idx);
+        }
     }
-    None
+    (false, k, 0)
 }
 
 impl Serialize for Value {

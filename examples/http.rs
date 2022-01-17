@@ -26,11 +26,11 @@ async fn main() {
             .url("https://tvapi.dykkan.com/v1/tags")
             .method(Method::Get)
             .capture(vec![
-                capture::json("data.1", "tag"),
+                capture::json("data|1", "tag"),
                 capture::header("content-length", "cl"),
                 capture::json("code", "code")
             ])
-            .expect(("code", Value::I32(0)))
+            .expect(("tag", Value::Str("language".to_string())))
             .build())
         .with_http(HttpTaskBuilder::new()
             .url("https://tvapi.dykkan.com/v1/tag/:tag")

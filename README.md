@@ -22,6 +22,24 @@ anole = "0.0.1"
 
 See the `examples/` folder.
 
+### Capture syntax
+
+* use `.` to split
+
+  To capture JSON value `a` from `{"code": 0, "data": {"a": "a"}]} `, type `data.a`.
+
+* use `|` to read as array
+
+  To capture JSON value `b` from `{"code": 0, "data": ["a", "b", "c"]}`,type `data|1`.
+
+* use `#` to read as attribute
+
+  To capture XML attribute `hover` from `<a hover="true"></a>`,type `a#hover`.
+
+* use `:` to replace with store value
+
+  To use captured value, type`:store_key`.
+
 ### HTTP 
 
 ```rust
