@@ -125,7 +125,7 @@ async fn main() {
 }
 ```
 
-
+You can also run with mysql and http task.
 
 ## TODO
 
