@@ -72,7 +72,7 @@ async fn main() {
             .method(Method::Get)
             .capture(vec![
               //capture as json,take data[1] and save as tag
-                capture::json("data.1", "tag"),
+                capture::json("data|1", "tag"),
               //capture header["content-length"] and save as cl
                 capture::header("content-length", "cl"),
                 capture::json("code", "code")
@@ -128,7 +128,7 @@ async fn main() {
                 .capture(vec![
                     capture::column("count", "order_count", capture::CapValueType::Size)
                 ]).expect(("order_count", value::Value::I64(1))))
-            .with_task(DBTask::new("SELECT name, create_time FROM tbl_order LIMIT #order_count#")
+            .with_task(DBTask::new("SELECT name, create_time FROM tbl_order LIMIT :order_count")
             .param("order_count")
             .capture(vec![
                 capture::column("name", "order_name", capture::CapValueType::Str),
