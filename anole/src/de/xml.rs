@@ -17,7 +17,7 @@ pub struct De<'a> {
 impl De<'_> {
     
     pub fn get(b: &str, paths: &str) -> crate::Result<crate::value::Value> {
-        let de = De {
+        let mut de = De {
             buf: b,
             attr_state: None,
             arr_state: None,
@@ -26,7 +26,7 @@ impl De<'_> {
         de.decode()
     } 
 
-    fn decode(mut self) -> crate::Result<crate::value::Value> {
+    fn decode(&mut self) -> crate::Result<crate::value::Value> {
         let mut reader = Reader::from_str(self.buf);
         reader.trim_text(true);
         let paths: Vec<&str> = self.paths.split('.').collect();

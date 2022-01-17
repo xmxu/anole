@@ -34,7 +34,7 @@ impl<'a> Engine<'a> {
 
     pub async fn run(mut self) -> crate::Result<()> {
         let cost = Instant::now();
-        for ele in self.tasks.into_iter() {
+        for mut ele in self.tasks.into_iter() {
             match ele.execute(self.ctx.as_mut()).await {
                 Ok(r) => {
                     self.ctx.report(r);

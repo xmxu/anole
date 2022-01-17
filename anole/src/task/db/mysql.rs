@@ -32,8 +32,8 @@ impl<'a> MysqlTask<'a> {
         self
     }
 
-    pub async fn execute(self, ctx: &mut Context) -> crate::Result<ReportItem> {
-        let options = match self.options {
+    pub async fn execute(&self, ctx: &mut Context) -> crate::Result<ReportItem> {
+        let options = match &self.options {
             Some(o) => o,
             None => return Err(crate::error::create_client("DBClientOptions Empty".into()))
         };
@@ -43,7 +43,7 @@ impl<'a> MysqlTask<'a> {
             Err(e) => return Err(e)
         };
 
-        for tt in self.tasks {
+        for tt in &self.tasks {
             match client.execute(tt, ctx).await {
                 Ok(_) => continue,
                 Err(e) => return Err(e)
@@ -163,7 +163,7 @@ struct MysqlClient {
 
 impl MysqlClient {
 
-    async fn create(&mut self, options: DBClientOption<'_>) -> crate::Result<()> {
+    async fn create(&mut self, options: &DBClientOption<'_>) -> crate::Result<()> {
         let pool = match MySqlPoolOptions::new()
             .connect_timeout(Duration::from_secs(5))
             .idle_timeout(Duration::from_secs(20))
@@ -178,7 +178,7 @@ impl MysqlClient {
         Ok(())
     }
 
-    async fn execute(&self, t: DBTask<'_>, ctx: &mut Context) -> crate::Result<()> {
+    async fn execute(&self, t: &DBTask<'_>, ctx: &mut Context) -> crate::Result<()> {
         let pool = &self.pool.as_ref().unwrap();
 
         let mut sql = t.sql.to_owned();

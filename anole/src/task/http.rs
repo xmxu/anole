@@ -21,8 +21,8 @@ pub enum Deserializer {
 }
 
 impl Deserializer {
-    pub fn json(&self, b: &bytes::Bytes) -> crate::Result<serde_json::Value> {
-        match serde_json::from_slice::<serde_json::Value>(b) {
+    pub fn json(&self, b: &str) -> crate::Result<serde_json::Value> {
+        match serde_json::from_str::<serde_json::Value>(b) {
             Ok(v) => Ok(v),
             Err(e) => Err(crate::error::decode(e.into()))
         }
@@ -74,13 +74,12 @@ impl From<&Method> for reqwest::Method {
 #[derive(Debug)]
 pub struct HttpTask<'a> {
     pub(crate) config: HttpTaskBuilder<'a>,
-    pub(crate) rsp: Option<Response>,
     pub(crate) task_id: String,
 }
 
 
 impl HttpTask<'_> {
-    pub async fn execute(mut self, ctx: &mut Context) -> crate::Result<ReportItem> {
+    pub async fn execute(&mut self, ctx: &mut Context) -> crate::Result<ReportItem> {
         let client = match reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(5))
         .connection_verbose(self.config.verbose)
@@ -169,72 +168,68 @@ impl HttpTask<'_> {
         let is_success = (&rsp.status()).is_success();
         if is_success {
             
-            self.rsp = Some(rsp);
-            match self.capture(ctx).await {
-                Ok(_) => Ok(ReportItem::new(task_id, *status_code as i32, format!("rsp succeed"))),
-                Err(e) => return Err(e)
+            // self.rsp = Some(rsp);
+            match self.capture(ctx, rsp).await {
+                Ok(_) => Ok(ReportItem::new(task_id, *status_code as i32, "rsp succeed".to_string())),
+                Err(e) => Err(e)
             }
 
         } else {
-            Ok(ReportItem::new(task_id, *status_code as i32, format!("rsp is not success")))
+            Ok(ReportItem::new(task_id, *status_code as i32, "rsp is not success".to_string()))
         }
         
     }
 
-    pub(crate) async fn capture(self, ctx: &mut Context) -> crate::Result<()> {
+    pub(crate) async fn capture(&mut self, ctx: &mut Context, rsp: Response) -> crate::Result<()> {
         if self.config.capture.is_none() { 
             return Ok(())
         }
-        if let Some(_rsp) = self.rsp {
-            if let Some(ref _caps) = self.config.capture {
-
-                if let Some(header_caps) = self.config.filter_caps(|c| c.is_header()) {
-                    let headers = &_rsp.headers().to_owned();
-                    for _cap in header_caps {
-                        if let Capture::Header(ref _c) = _cap {
-                            if let Some(v) = headers.get(_c.key) {
-                                if let Ok(hv) = v.to_str() {
-                                    ctx.store.set(_c.save_key.to_owned(), Value::Str(hv.to_string()));
-                                }
+        if let Some(ref _caps) = self.config.capture {
+            if let Some(header_caps) = self.config.filter_caps(|c| c.is_header()) {
+                let headers = rsp.headers().clone();
+                for _cap in header_caps {
+                    if let Capture::Header(ref _c) = _cap {
+                        if let Some(v) = headers.get(_c.key) {
+                            if let Ok(hv) = v.to_str() {
+                                ctx.store.set(_c.save_key.to_owned(), Value::Str(hv.to_string()));
                             }
                         }
                     }
                 }
+            }
 
+            if let Ok(text) = rsp.text().await {
                 if self.config.deserializer.is_json() {
                     if let Some(ref json_caps) = self.config.filter_caps(|c| c.is_json()) {
-                        if let Ok(ref b) = &_rsp.bytes().await {
-                            let json_values = match self.config.deserializer.json(b) {
-                                Ok(v) => v,
-                                Err(e) => return Err(e) 
-                            };
-                            if !json_values.is_null() {
-                                for _cap in json_caps {
-                                    if let Capture::Json(_c) = _cap {
-                                        if let Some(cv) = value::parse_json_value(&json_values, _c.key.to_owned()) {
-                                            if !cv.is_null() {
-                                                ctx.store.set(_c.save_key.to_owned(), Value::from(&cv));
-                                            }
-                                        }       
-                                    }
+                        let json_values = match self.config.deserializer.json(&text) {
+                            Ok(v) => v,
+                            Err(e) => return Err(e) 
+                        };
+                        if !json_values.is_null() {
+                            for _cap in json_caps {
+                                if let Capture::Json(_c) = _cap {
+                                    if let Some(cv) = value::parse_json_value(&json_values, _c.key.to_owned()) {
+                                        if !cv.is_null() {
+                                            ctx.store.set(_c.save_key.to_owned(), Value::from(&cv));
+                                        }
+                                    }       
                                 }
                             }
                         }
                     }
                 } else if self.config.deserializer.is_xml() {
                     if let Some(ref xml_caps) = self.config.filter_caps(|c| c.is_xml()) {
-                        if let Ok(ref b) = &_rsp.text().await {
-                            for _cap in xml_caps {
-                                if let Capture::Xml(_c) = _cap {
-                                    if let Ok(cv) = xml::De::get(b, _c.key) {
-                                        ctx.store.set(_c.save_key.to_owned(), cv);
-                                    }
+                        for _cap in xml_caps {
+                            if let Capture::Xml(_c) = _cap {
+                                if let Ok(cv) = xml::De::get(&text, _c.key) {
+                                    ctx.store.set(_c.save_key.to_owned(), cv);
                                 }
                             }
                         }
                     }
                 }
             }
+
         }
         Ok(())
     }
@@ -337,7 +332,7 @@ impl<'a> HttpTaskBuilder<'a> {
     }
 
     pub fn build(self) -> HttpTask<'a> {
-        HttpTask { config: self, rsp: None, task_id: crate::faker::uuid_v4() }
+        HttpTask { config: self, task_id: crate::faker::uuid_v4() }
     }
 
 }
