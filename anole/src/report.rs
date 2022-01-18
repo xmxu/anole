@@ -6,22 +6,21 @@ use std::sync;
 #[derive(Debug)]
 pub struct ReportItem {
     pub task_id: String,
-    pub code: i32,
     pub description: String,
     pub(crate) success: bool,
 }
 
 impl ReportItem {
 
-    pub(crate) fn success(task_id: &str, code: i32, description: String) -> Self {
+    pub(crate) fn success(task_id: &str, description: String) -> Self {
         ReportItem {
-            task_id: task_id.to_string(), code, description, success: true
+            task_id: task_id.to_string(), description, success: true
         }
     }
 
-    pub(crate) fn failed(task_id: &str, code: i32, description: String) -> Self {
+    pub(crate) fn failed(task_id: &str, description: String) -> Self {
         ReportItem {
-            task_id: task_id.to_string(), code, description, success: false
+            task_id: task_id.to_string(), description, success: false
         }
     }
 
@@ -32,7 +31,7 @@ impl std::fmt::Display for ReportItem {
         if self.success {
             write!(f, "{} SUCCESS", self.task_id)
         } else{
-            write!(f, "{} FAILED ({})", self.task_id, self.description)
+            write!(f, "{} FAILED [{}]", self.task_id, self.description)
         }
     }
 }

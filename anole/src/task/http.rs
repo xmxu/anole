@@ -83,7 +83,7 @@ impl HttpTask<'_> {
         let client = match reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(5))
         .connection_verbose(self.config.verbose)
-        .user_agent(format!("anole_client_{}", env!("CARGO_PKG_VERSION"))).build() {
+        .user_agent(format!("AnoleClient/{}", env!("CARGO_PKG_VERSION"))).build() {
             Ok(c) => c,
             Err(e) => return Err(crate::error::create_client(e.into()))
         };
@@ -100,6 +100,9 @@ impl HttpTask<'_> {
                     if let Some(v) = ctx.store.get(k.to_string()) {
                         let vv = v.as_str();
                         paths.push(vv);
+                    } else {
+                        ctx.report(ReportItem::failed(&self.task_id.to_owned(), format!("{} (not found '{}' value)", url, p)));
+                        return Ok(());
                     }
                 } else {
                     paths.push(p.to_string());
@@ -166,22 +169,22 @@ impl HttpTask<'_> {
         let status_code = &rsp.status().as_u16();
         let task_id = self.task_id.to_owned();
         let is_success = (&rsp.status()).is_success();
-        let mut report_item = ReportItem::failed(&task_id, *status_code as i32, "http request failed".to_string());
+        let mut report_item = ReportItem::failed(&task_id, format!("{} (status_code:{})", url, status_code));
         if is_success {
             match self.capture(ctx, rsp).await {
                 Ok(_) => {
                     if let Some(_expect) = &self.config.expect {
                         if let Some(_capture_value) = ctx.store.get(_expect.0.to_string()) {
                             if _expect.1 == *_capture_value {
-                                report_item = ReportItem::success(&task_id, *status_code as i32, format!("{} expect pass", _expect.0));
+                                report_item = ReportItem::success(&task_id, format!("{} expect pass", _expect.0));
                             } else {
-                                report_item = ReportItem::failed(&task_id, *status_code as i32, format!("{} expect {:?} but {:?}", _expect.0, _expect.1, _capture_value));
+                                report_item = ReportItem::failed(&task_id, format!("{} ({} expect {:?} but {:?})", url, _expect.0, _expect.1, _capture_value));
                             }
                         } else {
-                            report_item = ReportItem::failed(&task_id, *status_code as i32, format!("{} expect {:?} but not found", _expect.0, _expect.1));
+                            report_item = ReportItem::failed(&task_id, format!("{}({} expect {:?} but not found)", url, _expect.0, _expect.1));
                         }
                     } else {
-                        report_item = ReportItem::success(&task_id, *status_code as i32, "http request succeed".to_string());
+                        report_item = ReportItem::success(&task_id, format!("{} succeed", url));
                     }
                 },
                 Err(e) => return Err(e)

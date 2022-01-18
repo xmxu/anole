@@ -147,20 +147,18 @@ impl <'a> DBTask<'a> {
         }
 
         let task_id = self.task_id.to_owned();
-        let status_code: i32 = 0;
         if let Some(_expect) = &self.expect {
             if let Some(_value) = ctx.store.get(_expect.0.to_string()) {
                 if _value == &_expect.1 {
-                    return Ok(ReportItem::success(&task_id, status_code, format!("{} expect {:?} pass", _expect.0, _expect.1)))
+                    return Ok(ReportItem::success(&task_id, format!("{} expect {:?} pass", _expect.0, _expect.1)))
                 } else {
-                    return Ok(ReportItem::failed(&task_id, status_code, format!("{} expect {:?} but {:?}", _expect.0, _expect.1, _value)))
+                    return Ok(ReportItem::failed(&task_id, format!("{} expect {:?} but {:?}", _expect.0, _expect.1, _value)))
                 }
             } else {
-                return Ok(ReportItem::failed(&task_id, status_code, format!("{} expect {:?} but not found", _expect.0, _expect.1)))
+                return Ok(ReportItem::failed(&task_id, format!("{} expect {:?} but not found", _expect.0, _expect.1)))
             }
         }
-
-        Ok(ReportItem::success(&task_id, status_code, "database execute succeed".to_string()))
+        Ok(ReportItem::success(&task_id, "database execute succeed".to_string()))
     }
 
 }
