@@ -6,37 +6,37 @@ use std::{ops::Range, net::{Ipv4Addr, Ipv6Addr}};
 use rand::Rng;
 use uuid::Uuid;
 
-/// 生成0-1范围内的随机数
+/// Generate random f64[0-1)
 pub fn random() -> f64 {
     rand::thread_rng().gen::<f64>()
 }
 
-/// 生成指定范围内的i32随机数
+/// Generate random i32
 pub fn random_range(m: Range<i32>) -> i32 {
     rand::thread_rng().gen_range(m)
 }
 
-/// 生成0-255范围内的随机数
+/// Generate random u8[0,255]
 fn random_u8() -> u8 {
     rand::thread_rng().gen_range(0..=u8::MAX)
 }
 
-/// 生成0-65535范围内的随机数
+/// Generate random u16[0,65535]
 fn random_u16() -> u16 {
     rand::thread_rng().gen_range(0..=u16::MAX)
 }
 
-/// 随机生成false或者true
+/// Generate random bool
 pub fn random_bool()-> bool {
     rand::thread_rng().gen_bool(1.0 / 2.0)
 }
 
-/// 生成v4版本的uuid
+/// Generate uuid version4
 pub fn uuid_v4() -> String {
     Uuid::new_v4().to_string()
 }
 
-/// uuid v5版本的命名空间类型
+/// uuid version5's namespace
 pub enum UuidNameSpace {
     Dns,
     Oid,
@@ -44,7 +44,7 @@ pub enum UuidNameSpace {
     X500
 }
 
-/// 生成指定命名空间v5版本的uuid
+/// Generate uuid version5
 pub fn uuid_v5(namespace: UuidNameSpace, name: &[u8]) -> String {
     let ns = match namespace {
         UuidNameSpace::Dns => &Uuid::NAMESPACE_DNS,
@@ -55,7 +55,7 @@ pub fn uuid_v5(namespace: UuidNameSpace, name: &[u8]) -> String {
     Uuid::new_v5(ns, name).to_string()
 }
 
-/// 随机生成15位的imei
+/// Generate 15bit imei
 pub fn imei() -> String {
     let mut numbers: Vec<u8> = vec![];
     let mut sum = 0;
@@ -78,26 +78,30 @@ pub fn oaid() -> String {
     todo!()
 }
 
-/// 随机生成ipv4地址
+/// Generate ipv4 address
 pub fn ipv4() -> String {
     Ipv4Addr::new(random_u8(), random_u8(), random_u8(), random_u8()).to_string()
 }
 
-/// 随机生成ipv6地址
+/// Generate ipv6 address
 pub fn ipv6() -> String {
     Ipv6Addr::new(random_u16(), random_u16(), random_u16(), random_u16(), random_u16(), random_u16(), random_u16(), random_u16()).to_string()
 }
 
-/// 随机生成mac地址
+/// Generate mac address
 pub fn mac_address() -> String {
     format!("{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}", random_u8(), random_u8(), random_u8(), random_u8(), random_u8(), random_u8())
 }
 
-/// 字符串源类型
+/// StringSource
 pub enum StrSource {
+    /// [0-9]
     Digit,
+    /// [a-z]
     Alpha,
+    /// [a-zA-z]
     AlphaAll,
+    /// [a-zA-z0-9]
     DigitAlpha,
 }
 
@@ -106,7 +110,7 @@ const ALPHA_SOURCE: &str = "abcdefghijklmnopqrstuvwxyz";
 const ALPHA_ALL_SOURCE: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const DIGIT_ALPHA_SOURCE: &str = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-/// 根据指定的源类型和长度，随机生成字符串
+/// Generate random string using StringSource and length
 pub fn random_str(source: StrSource, len: usize) -> String {
     if len == 0 {
         return "".to_string();

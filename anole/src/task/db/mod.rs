@@ -2,13 +2,6 @@ pub mod mysql;
 
 #[derive(Debug)]
 pub struct DBClientOption<'a> {
-    // pub host: &'a str,
-    // pub port: u16,
-    // pub database_name: &'a str,
-    // pub username: &'a str,
-    // pub password: &'a str,
-    // pub charset: &'a str,
-    // pub debug: bool,
     pub url: &'a str,
     pub max_connections: u32,
 

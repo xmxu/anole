@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::value::Value;
 
-/// 保存数据
+/// Store captured values for using between tasks.
 #[derive(Debug)]
 pub struct Store {
     pub(crate) data: HashMap<String, Value>,

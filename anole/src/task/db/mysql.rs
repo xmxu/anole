@@ -8,7 +8,7 @@ use crate::{context::Context, task, capture::Capture, value::Value, faker, repor
 use super::DBClientOption;
 
 
-#[derive(Debug)]
+/// An MySQL task. 
 pub struct MysqlTask<'a> {
     //options
     options: Option<DBClientOption<'a>>,
@@ -21,16 +21,19 @@ impl<'a> MysqlTask<'a> {
         MysqlTask { options: None, tasks: vec![] }
     }
     
+    /// Specify MySQL client connection options.
     pub fn options(mut self, options: task::db::DBClientOption<'a>) -> Self {
         self.options = Some(options);
         self
     }
 
+    /// Add an database task. 
     pub fn with_task(mut self, t: DBTask<'a>) -> Self {
         self.tasks.push(t);
         self
     }
 
+    /// Execute all database task.
     pub async fn execute(&self, ctx: &mut Context) -> crate::Result<()> {
         let options = match &self.options {
             Some(o) => o,
@@ -55,6 +58,7 @@ impl<'a> MysqlTask<'a> {
     }
 }
 
+/// Database task.
 #[derive(Debug)]
 pub struct DBTask<'a> {
     pub sql: &'a str,

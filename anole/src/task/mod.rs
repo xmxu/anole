@@ -7,7 +7,6 @@ pub mod chain;
 pub mod http;
 pub mod db;
 
-#[derive(Debug)]
 pub enum Task<'a> {
     Http(Box<HttpTask<'a>>),
     Mysql(MysqlTask<'a>),

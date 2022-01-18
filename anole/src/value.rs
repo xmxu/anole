@@ -4,6 +4,8 @@ use sqlx::types::time::{self, Date, Time};
 
 use crate::{context::Context, error};
 
+
+/// Represents any capture support value.
 #[derive(Debug, Clone)]
 #[derive(std::cmp::PartialEq)]
 pub enum Value {
@@ -19,6 +21,7 @@ pub enum Value {
 }
 
 impl Value {
+    /// If Value can parse to i32, returns an i32. Returns Err otherwise.
     pub fn as_i32(&self) -> crate::Result<i32> {
         match &self {
             Self::I32(v) => Ok(*v),
@@ -33,6 +36,7 @@ impl Value {
         }
     }
 
+    /// If Value can parse to u32, returns an u32. Returns Err otherwise.
     pub fn as_u32(&self) -> crate::Result<u32> {
         match &self {
             Self::I32(v) => Ok(*v as u32),
@@ -47,6 +51,7 @@ impl Value {
         }
     }
 
+    /// If Value can parse to i64, returns an i64. Returns Err otherwise.
     pub fn as_i64(&self) -> crate::Result<i64> {
         match &self {
             Self::I32(v) => Ok(*v as i64),
@@ -63,6 +68,7 @@ impl Value {
         }
     }
 
+    /// If Value can parse to u64, returns an u64. Returns Err otherwise.
     pub fn as_u64(&self) -> crate::Result<u64> {
         match &self {
             Self::I32(v) => Ok(*v as u64),
@@ -79,6 +85,7 @@ impl Value {
         }
     }
 
+    /// If Value can parse to f64, returns an f64. Returns Err otherwise.
     pub fn as_f(&self) -> crate::Result<f64> {
         match &self {
             Self::I32(v) => Ok(*v as f64),
@@ -100,6 +107,7 @@ impl Value {
         }
     }
 
+    /// If Value can parse to bool, returns an bool. Returns Err otherwise.
     pub fn as_bool(&self) -> crate::Result<bool> {
         match &self {
             Self::I32(i) => Ok(*i > 0),
@@ -116,6 +124,7 @@ impl Value {
         }
     }
 
+    /// Returns Value parse to String.
     pub fn as_str(&self) -> String {
         match &self {
             Self::Str(s) => s.to_string(),
@@ -130,6 +139,7 @@ impl Value {
         }
     }
 
+    /// If Value can parse to Date, returns an Date. Returns Err otherwise.
     pub fn as_date(&self) -> crate::Result<Date> {
         match &self {
             Self::Date(d) => Ok(*d),
@@ -137,6 +147,7 @@ impl Value {
         }
     }
 
+    /// If Value can parse to Time, returns an Time. Returns Err otherwise.
     pub fn as_time(&self) -> crate::Result<Time> {
         match &self {
             Self::Time(t) => Ok(*t),
@@ -144,6 +155,7 @@ impl Value {
         }
     }
 
+    /// If Value is wildcard, returns real String. Returns None otherwise.
     pub fn as_wildcard(&self) -> Option<String> {
         match self {
             Self::Str(s) => {
@@ -156,14 +168,6 @@ impl Value {
         }
     }
 }
-
-// impl ToOwned for Value {
-//     type Owned = Value;
-
-//     fn to_owned(&self) -> Self::Owned {
-//         self.clone()
-//     }
-// }
 
 impl From<i32> for Value {
     fn from(i: i32) -> Self {
@@ -265,7 +269,6 @@ impl Serialize for Value {
     }
 }
 
-#[derive(Debug)]
 pub enum Body {
     File(String),
     Raw(bytes::Bytes),

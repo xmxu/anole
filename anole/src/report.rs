@@ -5,7 +5,8 @@ use std::sync;
 
 #[derive(Debug)]
 pub struct ReportItem {
-    pub task_id: String,
+    pub(crate) task_id: String,
+    /// Reporter description, include error message when task is failed.
     pub description: String,
     pub(crate) success: bool,
 }
@@ -36,11 +37,13 @@ impl std::fmt::Display for ReportItem {
     }
 }
 
+/// Task execute result reporter
 pub trait Reporter {
 
     fn report(&self, item: ReportItem);
 }
 
+/// Reporter using mpsc
 pub struct StdReporter {
     pub sender: sync::mpsc::Sender<ReportItem>,
 }

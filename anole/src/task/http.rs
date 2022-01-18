@@ -3,7 +3,7 @@ use reqwest::Response;
 
 use crate::{value::{Value, self, Body}, capture::Capture, context::Context, de::xml, report::ReportItem};
 
-#[derive(Debug)]
+/// HTTP Methods.
 pub enum Method {
     Get,
     Post,
@@ -13,10 +13,13 @@ pub enum Method {
     Patch,
 }
 
-#[derive(Debug)]
+/// HTTP body deserializer
 pub enum Deserializer {
+    /// Json
     Json,
+    /// XML
     Xml,
+    /// Protobuf (Not support yet).
     Protobuf(String),
 }
 
@@ -71,7 +74,7 @@ impl From<&Method> for reqwest::Method {
     }
 }
 
-#[derive(Debug)]
+/// An HTTP task.
 pub struct HttpTask<'a> {
     pub(crate) config: HttpTaskBuilder<'a>,
     pub(crate) task_id: String,
@@ -249,7 +252,15 @@ impl HttpTask<'_> {
     }
 }
 
-#[derive(Debug)]
+/// HTTP task builder.
+/// # Example
+/// 
+/// ```
+/// let http_task = HttpTaskBuilder::new()
+///     .url("https://crates.io/crates/sqlx")
+///     .method(Method::Get)
+///     .build();
+/// ```
 pub struct HttpTaskBuilder<'a> {
     pub(crate) url: &'a str,
     pub(crate) method: Method,
@@ -264,6 +275,7 @@ pub struct HttpTaskBuilder<'a> {
 }
 
 impl<'a> HttpTaskBuilder<'a> {
+    /// Create an builder.
     pub fn new() -> Self {
         HttpTaskBuilder {
             url: "",
@@ -279,21 +291,25 @@ impl<'a> HttpTaskBuilder<'a> {
         }
     }
 
+    /// Add http url.
     pub fn url(mut self, url: &'a str) -> Self {
         self.url = url;
         self
     }
 
+    /// Add http method.
     pub fn method(mut self, method: Method) -> Self {
         self.method = method;
         self
     }
 
+    /// Specify deserializer for http response body.
     pub fn deserializer(mut self, deserializer: Deserializer) -> Self {
         self.deserializer = deserializer;
         self
     }
 
+    /// Add http header.
     pub fn header(mut self, header: (&'a str, Value)) -> Self {
         if self.header.is_none() {
             self.header = Some(HashMap::new())
@@ -304,6 +320,7 @@ impl<'a> HttpTaskBuilder<'a> {
         self
     }
 
+    /// Add http query params.
     pub fn query(mut self, query: (&'a str, Value)) -> Self {
         if self.query.is_none() {
             self.query = Some(HashMap::new())
@@ -314,6 +331,7 @@ impl<'a> HttpTaskBuilder<'a> {
         self
     }
 
+    /// Add form for http body.
     pub fn form(mut self, form: (&'a str, Value)) -> Self {
         if self.form.is_none() {
             self.form = Some(HashMap::new())
@@ -324,21 +342,25 @@ impl<'a> HttpTaskBuilder<'a> {
         self
     }
 
+    /// Add http body.
     pub fn body(mut self, body: Body) ->Self {
         self.body = Some(body);
         self
     }
 
+    /// Add captures
     pub fn capture(mut self, capture: Vec<Capture<'a>>) -> Self {
         self.capture = Some(capture);
         self
     }
 
+    /// Whether enable debug info
     pub fn verbose(mut self, verbose: bool) -> Self {
         self.verbose = verbose;
         self
     }
 
+    /// Specify an expect condition for task.
     pub fn expect(mut self, tup: (&'a str, Value)) -> Self {
         self.expect = Some(tup);
         self
@@ -352,6 +374,7 @@ impl<'a> HttpTaskBuilder<'a> {
         None
     }
 
+    /// Build an HttpTask use this builder.
     pub fn build(self) -> HttpTask<'a> {
         HttpTask { config: self, task_id: crate::faker::uuid_v4() }
     }
