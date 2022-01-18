@@ -256,6 +256,8 @@ impl HttpTask<'_> {
 /// # Example
 /// 
 /// ```
+/// use anole::task::http::{HttpTaskBuilder, Method};
+/// 
 /// let http_task = HttpTaskBuilder::new()
 ///     .url("https://crates.io/crates/sqlx")
 ///     .method(Method::Get)
